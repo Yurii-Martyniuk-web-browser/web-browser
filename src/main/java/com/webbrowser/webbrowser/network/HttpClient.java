@@ -34,7 +34,7 @@ public class HttpClient {
             InputStream input = socket.getInputStream();
             BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.ISO_8859_1));
 
-            return parseResponse(reader, input);
+            return parseResponse(reader);
 
         } catch (IOException e) {
             System.err.println("Network error: Could not connect to " + request.getHost() + " over port " + request.getPort() + ". Error: " + e.getMessage());
@@ -50,7 +50,7 @@ public class HttpClient {
         }
     }
 
-    private HttpResponse parseResponse(BufferedReader reader, InputStream inputStream) throws IOException {
+    private HttpResponse parseResponse(BufferedReader reader) throws IOException {
         String statusLine = reader.readLine();
         if (statusLine == null || statusLine.isEmpty()) {
             return HttpResponse.internalError("Empty or malformed response from server.");
