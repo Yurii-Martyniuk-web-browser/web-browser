@@ -38,6 +38,8 @@ javafx {
 dependencies {
     implementation("org.controlsfx:controlsfx:11.2.1")
     implementation("org.kordamp.bootstrapfx:bootstrapfx-core:0.4.0")
+    implementation("org.openjfx:javafx-controls:23")
+    implementation("org.openjfx:javafx-fxml:23")
 
     implementation("org.jsoup:jsoup:1.21.2")
 

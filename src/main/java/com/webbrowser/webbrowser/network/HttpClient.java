@@ -3,11 +3,17 @@ package com.webbrowser.webbrowser.network;
 import javax.net.ssl.SSLSocketFactory;
 import java.io.*;
 import java.net.Socket;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.UnsupportedCharsetException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class HttpClient {
+
+    private final Pattern CHARSET_PATTERN = Pattern.compile("charset=([\\w\\-]+)", Pattern.CASE_INSENSITIVE);
 
     public HttpResponse sendRequest(HttpRequest request) throws IOException {
         Socket socket = null;
@@ -28,7 +34,7 @@ public class HttpClient {
             InputStream input = socket.getInputStream();
             BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.ISO_8859_1));
 
-            return parseResponse(reader);
+            return parseResponse(reader, input);
 
         } catch (IOException e) {
             System.err.println("Network error: Could not connect to " + request.getHost() + " over port " + request.getPort() + ". Error: " + e.getMessage());
@@ -44,7 +50,7 @@ public class HttpClient {
         }
     }
 
-    private HttpResponse parseResponse(BufferedReader reader) throws IOException {
+    private HttpResponse parseResponse(BufferedReader reader, InputStream inputStream) throws IOException {
         String statusLine = reader.readLine();
         if (statusLine == null || statusLine.isEmpty()) {
             return HttpResponse.internalError("Empty or malformed response from server.");
@@ -67,12 +73,37 @@ public class HttpClient {
             }
         }
 
+        String contentType = headers.get("Content-Type");
+        Charset charset = determineCharset(contentType);
+
+        System.out.println("Content-Type: " + contentType);
+        System.out.println("Charset " + charset);
+
         StringBuilder bodyBuilder = new StringBuilder();
         String line;
+
         while ((line = reader.readLine()) != null) {
             bodyBuilder.append(line).append("\n");
         }
 
-        return HttpResponse.create(statusCode, statusText, headers, bodyBuilder.toString());
+        byte[] isoBytes = bodyBuilder.toString().getBytes(StandardCharsets.ISO_8859_1);
+        String body = new String(isoBytes, charset);
+
+        return HttpResponse.create(statusCode, statusText, headers, body);
+    }
+
+    private Charset determineCharset(String contentTypeHeader) {
+        if (contentTypeHeader != null) {
+            Matcher matcher = CHARSET_PATTERN.matcher(contentTypeHeader);
+            if (matcher.find()) {
+                String charsetName = matcher.group(1);
+                try {
+                    return Charset.forName(charsetName);
+                } catch (UnsupportedCharsetException e) {
+                    System.err.println("Unsupported charset found: " + charsetName);
+                }
+            }
+        }
+        return StandardCharsets.UTF_8;
     }
 }

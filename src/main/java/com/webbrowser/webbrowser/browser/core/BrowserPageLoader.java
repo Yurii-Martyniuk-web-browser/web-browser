@@ -5,6 +5,7 @@ import com.webbrowser.webbrowser.browser.rendering.HtmlParser;
 import com.webbrowser.webbrowser.network.HttpProcessor;
 import com.webbrowser.webbrowser.network.HttpResponse;
 import com.webbrowser.webbrowser.browser.rendering.visitor.*;
+import javafx.application.Platform;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import org.jsoup.nodes.Document;
@@ -49,26 +50,31 @@ public class BrowserPageLoader extends PageLoadTemplate {
     @Override
     protected void buildFxNodes(Document domDocument) {
         System.out.println("Step 5: Building JavaFX nodes...");
-        viewPort.getChildren().clear();
 
-        FxNodeBuilderVisitor fxBuilder = new FxNodeBuilderVisitor(viewPort);
-        fxRenderer.traverse(domDocument, fxBuilder);
+        Platform.runLater(() -> {
+            viewPort.getChildren().clear();
 
-        viewPort.getChildren().addFirst(new Label("--- DOCUMENT TITLE: " + domDocument.title() + " ---"));
+            FxNodeBuilderVisitor fxBuilder = new FxNodeBuilderVisitor(viewPort);
+            fxRenderer.traverse(domDocument, fxBuilder);
+
+            viewPort.getChildren().addFirst(new Label("--- DOCUMENT TITLE: " + domDocument.title() + " ---"));
+        });
     }
 
     @Override
     protected void displayError(HttpResponse response) {
-        viewPort.getChildren().clear();
-
         System.err.println("Load Error: " + response.getStatusCode());
 
         Document errorDom = htmlParser.parse(response.getBody());
 
-        viewPort.getChildren().add(new javafx.scene.control.Label("--- HTTP Load Error ---"));
-        viewPort.getChildren().add(new javafx.scene.control.Label("Status: " + response.getStatusCode() + " " + response.getStatusText()));
+        Platform.runLater(() -> {
+            viewPort.getChildren().clear();
 
-        FxNodeBuilderVisitor fxBuilder = new FxNodeBuilderVisitor(viewPort);
-        fxRenderer.traverse(errorDom, fxBuilder);
+            viewPort.getChildren().add(new Label("--- HTTP Load Error ---"));
+            viewPort.getChildren().add(new Label("Status: " + response.getStatusCode() + " " + response.getStatusText()));
+
+            FxNodeBuilderVisitor fxBuilder = new FxNodeBuilderVisitor(viewPort);
+            fxRenderer.traverse(errorDom, fxBuilder);
+        });
     }
 }

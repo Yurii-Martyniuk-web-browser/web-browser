@@ -4,7 +4,6 @@ import com.webbrowser.webbrowser.browser.rendering.visitor.NodeVisitor;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
-
 public class FxRenderer {
 
     public void traverse(Document document, NodeVisitor visitor) {
@@ -18,10 +17,12 @@ public class FxRenderer {
             return;
         }
 
-        visitor.visit(element);
+        visitor.head(element);
 
         for (Element child : element.children()) {
             traverseElement(child, visitor);
         }
+
+        visitor.tail(element);
     }
 }
