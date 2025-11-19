@@ -1,13 +1,13 @@
 package com.webbrowser.webbrowser.browser.rendering.visitor;
 
 import com.webbrowser.webbrowser.browser.rendering.StyleContext;
+import com.webbrowser.webbrowser.browser.rendering.dom.Element;
 import javafx.application.Platform;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
-import org.jsoup.nodes.Element;
 import java.util.Stack;
 
 

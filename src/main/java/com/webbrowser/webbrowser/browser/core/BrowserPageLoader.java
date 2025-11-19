@@ -1,14 +1,16 @@
 package com.webbrowser.webbrowser.browser.core;
 
+import com.webbrowser.webbrowser.browser.js.JsEngine;
+import com.webbrowser.webbrowser.browser.js.JsExecutionVisitor;
 import com.webbrowser.webbrowser.browser.rendering.FxRenderer;
 import com.webbrowser.webbrowser.browser.rendering.HtmlParser;
+import com.webbrowser.webbrowser.browser.rendering.dom.Document;
 import com.webbrowser.webbrowser.network.HttpProcessor;
 import com.webbrowser.webbrowser.network.HttpResponse;
 import com.webbrowser.webbrowser.browser.rendering.visitor.*;
 import javafx.application.Platform;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
-import org.jsoup.nodes.Document;
 
 
 public class BrowserPageLoader extends PageLoadTemplate {
@@ -17,12 +19,14 @@ public class BrowserPageLoader extends PageLoadTemplate {
     private final FxRenderer fxRenderer;
     private final HtmlParser htmlParser;
     private final VBox viewPort;
+    private final JsEngine jsEngine;
 
     public BrowserPageLoader(VBox viewPort) {
         this.httpProcessor = new HttpProcessor();
         this.htmlParser = new HtmlParser();
         this.fxRenderer = new FxRenderer();
         this.viewPort = viewPort;
+        this.jsEngine = new JsEngine();
     }
 
     @Override
@@ -38,7 +42,7 @@ public class BrowserPageLoader extends PageLoadTemplate {
     @Override
     protected void fetchResources(Document domDocument) {
         System.out.println("Step 3: Fetching external resources (CSS, images)...");
-        fxRenderer.traverse(domDocument, new ResourceFetcherVisitor());
+        fxRenderer.traverse(domDocument, new ResourceFetcherVisitor(httpProcessor));
     }
 
     @Override
@@ -76,5 +80,14 @@ public class BrowserPageLoader extends PageLoadTemplate {
             FxNodeBuilderVisitor fxBuilder = new FxNodeBuilderVisitor(viewPort);
             fxRenderer.traverse(errorDom, fxBuilder);
         });
+    }
+
+    @Override
+    protected void executeScripts(Document domDocument) {
+        System.out.println("Step 3.5: Executing JavaScript...");
+
+        jsEngine.initContext(domDocument);
+
+        fxRenderer.traverse(domDocument, new JsExecutionVisitor(jsEngine, httpProcessor));
     }
 }

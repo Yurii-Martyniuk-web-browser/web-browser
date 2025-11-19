@@ -21,6 +21,8 @@ public class BrowserApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        System.out.println(System.getProperty("java.home"));
+
         primaryStage.setTitle("Simple FX Web Browser");
 
         viewPort = new VBox(10);

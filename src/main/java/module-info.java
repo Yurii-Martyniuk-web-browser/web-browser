@@ -4,7 +4,8 @@ module com.webbrowser.webbrowser {
 
     requires org.controlsfx.controls;
     requires org.kordamp.bootstrapfx.core;
-    requires org.jsoup;
+    requires java.scripting;
+    requires org.graalvm.js.scriptengine;
 
     opens com.webbrowser.webbrowser to javafx.fxml;
     exports com.webbrowser.webbrowser;

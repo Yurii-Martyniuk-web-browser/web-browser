@@ -2,7 +2,7 @@ package com.webbrowser.webbrowser.browser.rendering.visitor;
 
 import com.webbrowser.webbrowser.browser.rendering.CssStorage;
 import com.webbrowser.webbrowser.browser.rendering.StyleContext;
-import org.jsoup.nodes.Element;
+import com.webbrowser.webbrowser.browser.rendering.dom.Element;
 
 public class CssApplierVisitor implements NodeVisitor {
 

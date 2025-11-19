@@ -6,14 +6,16 @@ import com.webbrowser.webbrowser.network.chain.ResponseHandler;
 
 import java.io.IOException;
 
-public class HttpProcessor {
+public class HttpProcessor implements ResourceLoader {
+
     private final HttpClient httpClient;
+    private final RedirectHandler redirectHandler;
     private final ResponseHandler chainStart;
 
     public HttpProcessor() {
         this.httpClient = new HttpClient();
 
-        ResponseHandler redirectHandler = new RedirectHandler(httpClient);
+        this.redirectHandler = new RedirectHandler(httpClient);
         ResponseHandler errorHandler = new ErrorHandler();
 
         redirectHandler.setNextHandler(errorHandler);
@@ -36,6 +38,27 @@ public class HttpProcessor {
         } catch (IOException e) {
             System.err.println("Unexpected fatal load error: " + e.getMessage());
             return HttpResponse.internalError("An unexpected system error occurred during page loading.");
+        }
+    }
+
+    @Override
+    public String loadResource(String url) {
+        try {
+            HttpRequest request = HttpRequest.createGet(url);
+            HttpResponse response = httpClient.sendRequest(request);
+
+            if (response.isSuccessful()) {
+                return response.getBody();
+            } else {
+                System.err.println("Failed to load resource " + url + ". Status: " + response.getStatusCode());
+                return "";
+            }
+        } catch (IllegalArgumentException e) {
+            System.err.println("Invalid URL for resource: " + url);
+            return "";
+        } catch (java.io.IOException e) {
+            System.err.println("Error loading resource " + url + ": " + e.getMessage());
+            return "";
         }
     }
 }

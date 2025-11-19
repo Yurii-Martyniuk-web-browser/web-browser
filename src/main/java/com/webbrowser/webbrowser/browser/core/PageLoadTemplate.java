@@ -1,7 +1,7 @@
 package com.webbrowser.webbrowser.browser.core;
 
+import com.webbrowser.webbrowser.browser.rendering.dom.Document;
 import com.webbrowser.webbrowser.network.HttpResponse;
-import org.jsoup.nodes.Document;
 
 
 public abstract class PageLoadTemplate {
@@ -21,6 +21,8 @@ public abstract class PageLoadTemplate {
 
         fetchResources(domDocument);
 
+        executeScripts(domDocument);
+
         applyStyles(domDocument);
 
         buildFxNodes(domDocument);
@@ -29,14 +31,10 @@ public abstract class PageLoadTemplate {
     }
 
     protected abstract HttpResponse fetchHttpResponse(String url);
-
     protected abstract Document parseHtml(String htmlContent);
-
     protected abstract void fetchResources(Document domDocument);
-
     protected abstract void applyStyles(Document domDocument);
-
     protected abstract void buildFxNodes(Document domDocument);
-
     protected abstract void displayError(HttpResponse response);
+    protected abstract void executeScripts(Document domDocument);
 }
