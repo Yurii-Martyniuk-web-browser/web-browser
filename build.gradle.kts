@@ -11,10 +11,6 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
-
-    maven {
-        url = uri("https://oss.sonatype.org/content/repositories/snapshots/")
-    }
 }
 
 val junitVersion = "5.12.1"
@@ -44,11 +40,6 @@ dependencies {
     implementation("org.kordamp.bootstrapfx:bootstrapfx-core:0.4.0")
     implementation("org.openjfx:javafx-controls:23")
     implementation("org.openjfx:javafx-fxml:23")
-
-    implementation("org.graalvm.sdk:graal-sdk:23.1.2")
-    implementation("org.graalvm.truffle:truffle-api:23.1.2")
-//    implementation("org.graalvm.js:js:23.1.2")
-    implementation("org.graalvm.js:js-scriptengine:23.1.2")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")

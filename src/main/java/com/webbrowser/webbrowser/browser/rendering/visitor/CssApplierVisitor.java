@@ -3,34 +3,42 @@ package com.webbrowser.webbrowser.browser.rendering.visitor;
 import com.webbrowser.webbrowser.browser.rendering.CssStorage;
 import com.webbrowser.webbrowser.browser.rendering.StyleContext;
 import com.webbrowser.webbrowser.browser.rendering.dom.Element;
+import com.webbrowser.webbrowser.browser.rendering.dom.Node;
 
 public class CssApplierVisitor implements NodeVisitor {
 
     public static final String STYLE_CONTEXT_KEY = "style_context";
 
     @Override
-    public void head(Element element) {
+    public void head(Node node) {
+        // Стилі застосовуються тільки до Element (тегів). TextNode пропускаємо.
+        if (!(node instanceof Element)) {
+            return;
+        }
+
+        Element element = (Element) node;
         StyleContext context = new StyleContext();
         String tagName = element.tagName().toLowerCase();
 
+        // 1. Стилі по тегу
         String tagStyle = CssStorage.getStyleForTag(tagName);
         parseAndSet(context, tagStyle);
 
+        // 2. Стилі по класу
         String classAttr = element.attr("class");
         if (!classAttr.isEmpty()) {
             String[] classes = classAttr.split("\\s+");
             for (String className : classes) {
                 String classStyle = CssStorage.getStyleForClass(className);
                 if (!classStyle.isEmpty()) {
-                    System.out.println("DEBUG: Applying class style: ." + className);
                     parseAndSet(context, classStyle);
                 }
             }
         }
 
+        // 3. Інлайн стилі
         String inlineStyle = element.attr("style");
         if (!inlineStyle.isEmpty()) {
-            System.out.println("DEBUG: Applying inline style for <" + tagName + ">");
             parseAndSet(context, inlineStyle);
         }
 
@@ -38,7 +46,7 @@ public class CssApplierVisitor implements NodeVisitor {
     }
 
     @Override
-    public void tail(Element element) {
+    public void tail(Node node) {
     }
 
     private void parseAndSet(StyleContext context, String cssString) {

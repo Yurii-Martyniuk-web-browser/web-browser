@@ -1,8 +1,9 @@
 package com.webbrowser.webbrowser.browser.rendering.visitor;
 
 import com.webbrowser.webbrowser.browser.rendering.dom.Element;
+import com.webbrowser.webbrowser.browser.rendering.dom.Node;
 
 public interface NodeVisitor {
-    void head(Element element);
-    void tail(Element element);
+    void head(Node element);
+    void tail(Node element);
 }

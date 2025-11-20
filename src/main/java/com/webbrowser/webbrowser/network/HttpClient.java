@@ -89,6 +89,8 @@ public class HttpClient {
         byte[] isoBytes = bodyBuilder.toString().getBytes(StandardCharsets.ISO_8859_1);
         String body = new String(isoBytes, charset);
 
+        System.out.println("Body: " + body);
+
         return HttpResponse.create(statusCode, statusText, headers, body);
     }
 

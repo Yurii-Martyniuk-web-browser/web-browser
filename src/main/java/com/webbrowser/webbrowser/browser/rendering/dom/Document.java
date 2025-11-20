@@ -5,7 +5,7 @@ import java.util.List;
 
 
 public class Document {
-    private Element root;
+    private final Element root;
     private String title = "";
 
     public Document(Element root) {
@@ -13,7 +13,7 @@ public class Document {
     }
 
     // Імітація document.children()
-    public List<Element> children() {
+    public List<Node> children() {
         return root != null ? root.children() : Collections.emptyList();
     }
 
@@ -24,5 +24,9 @@ public class Document {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public Element getRoot() {
+        return root;
     }
 }
