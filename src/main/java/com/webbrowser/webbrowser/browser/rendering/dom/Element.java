@@ -20,6 +20,10 @@ public class Element extends Node {
         return attributes.get(key).toString();
     }
 
+    public String getAttribute(String key) {
+        return attributes.getAttr(key);
+    }
+
     public Attributes attributes() {
         return attributes;
     }

@@ -11,7 +11,6 @@ public class CssApplierVisitor implements NodeVisitor {
 
     @Override
     public void head(Node node) {
-        // Стилі застосовуються тільки до Element (тегів). TextNode пропускаємо.
         if (!(node instanceof Element)) {
             return;
         }
@@ -20,11 +19,9 @@ public class CssApplierVisitor implements NodeVisitor {
         StyleContext context = new StyleContext();
         String tagName = element.tagName().toLowerCase();
 
-        // 1. Стилі по тегу
         String tagStyle = CssStorage.getStyleForTag(tagName);
         parseAndSet(context, tagStyle);
 
-        // 2. Стилі по класу
         String classAttr = element.attr("class");
         if (!classAttr.isEmpty()) {
             String[] classes = classAttr.split("\\s+");
@@ -36,7 +33,6 @@ public class CssApplierVisitor implements NodeVisitor {
             }
         }
 
-        // 3. Інлайн стилі
         String inlineStyle = element.attr("style");
         if (!inlineStyle.isEmpty()) {
             parseAndSet(context, inlineStyle);

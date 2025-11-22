@@ -23,4 +23,16 @@ public class Attributes {
     public Object get(String key) {
         return userDataMap.getOrDefault(key, "");
     }
+
+    public String getAttr(String key) {
+        return attributeMap.get(key);
+    }
+
+    @Override
+    public String toString() {
+        return "Attributes{" +
+                "attributeMap=" + attributeMap +
+                ", userDataMap=" + userDataMap +
+                '}';
+    }
 }

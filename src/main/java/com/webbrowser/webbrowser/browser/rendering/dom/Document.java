@@ -12,12 +12,10 @@ public class Document {
         this.root = root;
     }
 
-    // Імітація document.children()
     public List<Node> children() {
         return root != null ? root.children() : Collections.emptyList();
     }
 
-    // Імітація document.title()
     public String title() {
         return title;
     }

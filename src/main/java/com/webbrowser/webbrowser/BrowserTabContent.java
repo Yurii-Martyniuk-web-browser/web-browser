@@ -16,12 +16,11 @@ public class BrowserTabContent {
 
     private final BorderPane root;
     private final TextField addressBar;
-    private final VBox viewPort;
     private final BrowserPageLoader pageLoader;
     private final StringProperty titleProperty = new SimpleStringProperty("New Tab");
 
     public BrowserTabContent() {
-        viewPort = new VBox(10);
+        VBox viewPort = new VBox(10);
         viewPort.setPadding(new Insets(10));
         viewPort.setStyle("-fx-background-color: white;");
 
@@ -43,7 +42,6 @@ public class BrowserTabContent {
         goButton.setOnAction(e -> loadPage());
         addressBar.setOnAction(e -> loadPage());
 
-        // Відкриття вікна з JS кодом
         viewJsButton.setOnAction(e -> {
             JsCodeViewer viewer = new JsCodeViewer(pageLoader.getLoadedScripts());
             viewer.show();
@@ -71,7 +69,6 @@ public class BrowserTabContent {
             addressBar.setText(url);
         }
 
-        // Очищаємо попередні скрипти перед новим завантаженням
         pageLoader.clearScripts();
 
         final String finalUrl = url;

@@ -9,7 +9,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class HtmlParser {
-    // Список тегів, які не мають закриваючої частини
     private static final Set<String> VOID_TAGS = Set.of(
             "br", "img", "hr", "meta", "link", "input", "source", "track", "wbr",
             "area", "base", "col", "embed", "param"
@@ -19,7 +18,6 @@ public class HtmlParser {
     private static final Pattern ATTR_PATTERN = Pattern.compile("([a-zA-Z0-9\\-]+)=\\\"([^\\\"]*)\\\"");
 
     public Document parse(String html) {
-        // 1. ОЧИЩЕННЯ: Видаляємо сміття, яке ламає рендер
         String cleanHtml = preprocessHtml(html);
 
         Element root = new Element("html");
@@ -29,18 +27,11 @@ public class HtmlParser {
         return doc;
     }
 
-    /**
-     * Видаляє коментарі, скрипти, стилі та DOCTYPE.
-     */
     private String preprocessHtml(String html) {
-        // Видаляємо DOCTYPE
         html = html.replaceAll("<!(?i)DOCTYPE[^>]*>", "");
 
-        // Видаляємо коментарі html = html.replaceAll("", "");
-
-        // Видаляємо вміст <script>...</script> та <style>...</style>
-        html = html.replaceAll("(?i)<script[\\s\\S]*?</script>", "");
-        html = html.replaceAll("(?i)<style[\\s\\S]*?</style>", "");
+//        html = html.replaceAll("(?i)<script[\\s\\S]*?</script>", "");
+//        html = html.replaceAll("(?i)<style[\\s\\S]*?</style>", "");
 
         return html;
     }
@@ -87,7 +78,6 @@ public class HtmlParser {
             tokens.add(t);
             last = m.end();
         }
-        // Додаємо залишок тексту після останнього тегу
         if (last < html.length()) {
             String remainder = html.substring(last);
             if (!remainder.isBlank()) {
@@ -107,7 +97,6 @@ public class HtmlParser {
         for (Token t : tokens) {
             switch (t.type) {
                 case TEXT -> {
-                    // Нормалізація: перетворюємо переноси рядків на пробіли
                     String cleanText = t.text.replaceAll("\\s+", " ");
                     if (!cleanText.isBlank()) {
                         stack.peek().addChild(new TextNode(cleanText));
@@ -122,7 +111,6 @@ public class HtmlParser {
                     Element e = new Element(t.name);
                     parseAttributes(e, t.attrs);
                     stack.peek().addChild(e);
-                    // meta та link не кладемо в стек, щоб не плутати вкладеність
                     if (!t.name.equals("link") && !t.name.equals("meta")) {
                         stack.push(e);
                     }
@@ -135,7 +123,6 @@ public class HtmlParser {
                         continue;
                     }
 
-                    // Захист від неправильної вкладеності (закриваємо теги, поки не знайдемо пару)
                     if (stack.stream().anyMatch(e -> e.tagName().equals(closing))) {
                         while (!stack.isEmpty() && !stack.peek().tagName().equals(closing)) {
                             stack.pop();

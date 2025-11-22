@@ -20,8 +20,7 @@ public class CssStorage {
         tagStyles.put("h5", "font-size: .83em; font-weight: bold; margin: 1.67em 0; display: block;");
 
         tagStyles.put("p", "margin: 1em 0; font-size: 14px; display: block;");
-//        tagStyles.put("div", "display: block;"); // Базовий блок
-        tagStyles.put("span", "display: inline;"); // Базовий інлайн
+        tagStyles.put("span", "display: inline;");
         tagStyles.put("strong", "font-weight: bold;");
         tagStyles.put("em", "font-style: italic;");
         tagStyles.put("hr", "border-top: 1px solid #ccc; margin: 0.5em auto; display: block; height: 0;");
@@ -40,10 +39,7 @@ public class CssStorage {
         tagStyles.put("input", "border: 1px solid #aaa; padding: 3px; background-color: white;");
         tagStyles.put("button", "padding: 5px 10px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; background-color: #f0f0f0;");
         tagStyles.put("label", "display: inline-block;");
-//
-//        // Фрагмент CssStorage
         tagStyles.put("div", "display: block; min-height: 10px; border-width: 1px; border-color: red; margin: 3px;");
-//
         classStyles.put("highlight", "background-color: yellow; color: black; padding: 2px 4px; border-radius: 3px;");
         classStyles.put("primary", "background-color: #007bff; color: white;");
         classStyles.put("secondary", "background-color: #6c757d; color: white;");
@@ -52,21 +48,17 @@ public class CssStorage {
         classStyles.put("m-0", "margin: 0;");
         classStyles.put("p-3", "padding: 15px;");
         classStyles.put("container", "width: 90%; margin: 0 auto; display: block;");
-        classStyles.put("row", "display: block;"); // Потрібен Flexbox, тут симуляція блоку
-        classStyles.put("col", "display: inline-block; padding: 5px;"); // Потрібен Flexbox, тут симуляція інлайн-блоку
-        classStyles.put("invisible", "display: none;"); // Для елементів, які повинні бути приховані
+        classStyles.put("row", "display: block;");
+        classStyles.put("col", "display: inline-block; padding: 5px;");
+        classStyles.put("invisible", "display: none;");
         classStyles.put("flex", "display: flex;");
 
-        // В блоці static {} у класі CssStorage додайте:
-
-// Базові стилі для основних блоків Вікіпедії
         classStyles.put("mw-body", "margin: 10px; padding: 10px; background-color: white; border: 1px solid #ccc;");
         classStyles.put("mw-body-content", "font-family: sans-serif; font-size: 14px; line-height: 1.6;");
-        classStyles.put("infobox", "background-color: #f8f9fa; border: 1px solid #a2a9b1; padding: 5px; float: right;"); // float не працює в VBox, але фон буде
+        classStyles.put("infobox", "background-color: #f8f9fa; border: 1px solid #a2a9b1; padding: 5px; float: right;");
         classStyles.put("wikitable", "border: 1px solid black; border-collapse: collapse; margin: 10px 0;");
         classStyles.put("toc", "background-color: #f8f9fa; border: 1px solid #a2a9b1; padding: 10px; display: block;");
 
-// Приховуємо службові елементи, які важко рендерити
         classStyles.put("mw-jump-link", "display: none;");
         classStyles.put("noprint", "display: none;");
     }

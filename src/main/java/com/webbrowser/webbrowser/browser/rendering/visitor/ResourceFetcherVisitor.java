@@ -27,18 +27,20 @@ public class ResourceFetcherVisitor implements NodeVisitor {
 
     @Override
     public void head(Node node) {
-        // 1. ВАЖЛИВО: Перевіряємо тип вузла.
-        // Ми шукаємо теги <link>, <img>, <script>, тому TextNode нас тут не цікавлять.
-        if (!(node instanceof Element)) {
+        if (!(node instanceof Element element)) {
             return;
         }
 
-        Element element = (Element) node;
         String tagName = element.tagName().toLowerCase();
 
-        // 1. Обробка CSS
-        if (tagName.equals("link") && "stylesheet".equalsIgnoreCase(element.attr("rel"))) {
-            String href = element.attr("href");
+        System.out.println("tagName: " + tagName);
+        System.out.println("attr: " + element.attr("rel"));
+        System.out.println("Attributes: " + element.attributes());
+
+
+
+        if (tagName.equals("link") && "stylesheet".equalsIgnoreCase(element.getAttribute("rel"))) {
+            String href = element.getAttribute("href");
             if (!href.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, href);
@@ -52,9 +54,8 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                 }
             }
         }
-        // 2. Обробка Картинок
         else if (tagName.equals("img")) {
-            String src = element.attr("src");
+            String src = element.getAttribute("src");
             if (!src.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
@@ -62,12 +63,11 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                 } catch (Exception ignored) {}
             }
         }
-        // 3. Збір JS коду
         else if (tagName.equals("script")) {
-            String src = element.attr("src");
+            String src = element.getAttribute("src");
+            System.out.println("Fetching script: " + src);
 
-            if (!src.isEmpty()) {
-                // Зовнішній скрипт (src="...")
+            if (src != null && !src.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
                     System.out.println("Fetching JS: " + absoluteUrl);
@@ -79,12 +79,18 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                     System.err.println("Failed to load JS: " + src);
                 }
             } else {
-                // Інлайн скрипт (<script>code...</script>)
-                // ТУТ ЗМІНА: Використовуємо element.text(), який склеює дітей-TextNodes
                 String inlineCode = element.text();
 
+                System.out.println("--- Processing Inline Script ---");
+                System.out.println("Raw text inside script tag: '" + inlineCode + "'");
+
                 if (!inlineCode.isEmpty()) {
-                    loadedScripts.put("Inline Script #" + (++inlineScriptCounter), inlineCode);
+                    String type = element.getAttribute("type");
+                    if (type == null || type.isEmpty() || type.equals("text/javascript") || type.equals("application/javascript")) {
+                        loadedScripts.put("Inline Script #" + (++inlineScriptCounter), inlineCode);
+                    } else {
+                        System.out.println("Skipping script with type: " + type);
+                    }
                 }
             }
         }
