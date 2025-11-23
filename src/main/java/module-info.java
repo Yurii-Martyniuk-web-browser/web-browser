@@ -5,7 +5,13 @@ module com.webbrowser.webbrowser {
     requires org.controlsfx.controls;
     requires org.kordamp.bootstrapfx.core;
     requires java.scripting;
+    requires com.google.gson;
+    requires java.net.http;
+    requires java.sql;
+
 
     opens com.webbrowser.webbrowser to javafx.fxml;
     exports com.webbrowser.webbrowser;
+    exports com.webbrowser.webbrowser.ui;
+    opens com.webbrowser.webbrowser.ui to javafx.fxml;
 }

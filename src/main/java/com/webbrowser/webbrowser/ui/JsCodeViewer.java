@@ -1,4 +1,4 @@
-package com.webbrowser.webbrowser;
+package com.webbrowser.webbrowser.ui;
 
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;

@@ -41,6 +41,9 @@ dependencies {
     implementation("org.openjfx:javafx-controls:23")
     implementation("org.openjfx:javafx-fxml:23")
 
+    implementation("com.google.code.gson:gson:2.13.1")
+    implementation("org.xerial:sqlite-jdbc:3.50.3.0")
+
     testImplementation("org.junit.jupiter:junit-jupiter-api:${junitVersion}")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:${junitVersion}")
 }

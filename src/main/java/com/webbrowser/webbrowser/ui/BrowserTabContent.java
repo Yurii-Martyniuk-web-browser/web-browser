@@ -1,4 +1,4 @@
-package com.webbrowser.webbrowser;
+package com.webbrowser.webbrowser.ui;
 
 import com.webbrowser.webbrowser.browser.core.BrowserPageLoader;
 import javafx.beans.property.SimpleStringProperty;
