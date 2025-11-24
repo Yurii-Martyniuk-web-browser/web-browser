@@ -32,9 +32,8 @@ public class HttpClient {
             output.flush();
 
             InputStream input = socket.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(input, StandardCharsets.ISO_8859_1));
 
-            return parseResponse(reader);
+            return parseResponse(input);
 
         } catch (IOException e) {
             System.err.println("Network error: Could not connect to " + request.getHost() + " over port " + request.getPort() + ". Error: " + e.getMessage());
@@ -50,49 +49,74 @@ public class HttpClient {
         }
     }
 
-    private HttpResponse parseResponse(BufferedReader reader) throws IOException {
-        String statusLine = reader.readLine();
-        if (statusLine == null || statusLine.isEmpty()) {
-            return HttpResponse.internalError("Empty or malformed response from server.");
+    private HttpResponse parseResponse(InputStream input) throws IOException {
+
+        ByteArrayOutputStream headerBuffer = new ByteArrayOutputStream();
+        int prev = -1, curr;
+
+        // 1. Read headers manually byte-by-byte until CRLF CRLF
+        while ((curr = input.read()) != -1) {
+            headerBuffer.write(curr);
+
+            // detect \r\n\r\n
+            if (prev == '\r' && curr == '\n') {
+                byte[] hb = headerBuffer.toByteArray();
+                int len = hb.length;
+
+                // check last 4 bytes = \r\n\r\n
+                if (len >= 4 &&
+                        hb[len - 4] == '\r' &&
+                        hb[len - 3] == '\n' &&
+                        hb[len - 2] == '\r' &&
+                        hb[len - 1] == '\n') {
+
+                    break;
+                }
+            }
+
+            prev = curr;
         }
 
-        String[] statusParts = statusLine.split(" ", 3);
-        if (statusParts.length < 3) {
-            return HttpResponse.internalError("Malformed status line: " + statusLine);
-        }
+        // parse header string
+        String headerText = new String(headerBuffer.toByteArray(), StandardCharsets.ISO_8859_1);
+        String[] headerLines = headerText.split("\r\n");
 
+        // --- STATUS LINE ---
+        String[] statusParts = headerLines[0].split(" ", 3);
         int statusCode = Integer.parseInt(statusParts[1]);
         String statusText = statusParts[2];
 
+        // --- HEADERS ---
         Map<String, String> headers = new HashMap<>();
-        String headerLine;
-        while (!(headerLine = reader.readLine()).isEmpty()) {
-            String[] headerParts = headerLine.split(": ", 2);
-            if (headerParts.length == 2) {
-                headers.put(headerParts[0].trim(), headerParts[1].trim());
+        for (int i = 1; i < headerLines.length; i++) {
+            String line = headerLines[i];
+            if (line.isEmpty()) break;
+            int idx = line.indexOf(":");
+            if (idx > 0) {
+                String k = line.substring(0, idx).trim();
+                String v = line.substring(idx + 1).trim();
+                headers.put(k, v);
             }
         }
 
-        String contentType = headers.get("Content-Type");
+        // determine charset
+        String contentType = headers.getOrDefault("Content-Type", "");
         Charset charset = determineCharset(contentType);
 
-        System.out.println("Content-Type: " + contentType);
-        System.out.println("Charset " + charset);
+        // 2. Now read body RAW
+        ByteArrayOutputStream bodyBuffer = new ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int read;
 
-        StringBuilder bodyBuilder = new StringBuilder();
-        String line;
-
-        while ((line = reader.readLine()) != null) {
-            bodyBuilder.append(line).append("\n");
+        while ((read = input.read(buf)) != -1) {
+            bodyBuffer.write(buf, 0, read);
         }
 
-        byte[] isoBytes = bodyBuilder.toString().getBytes();
-        String body = new String(isoBytes, charset);
+        byte[] bodyBytes = bodyBuffer.toByteArray();
 
-        System.out.println("Body: " + body);
-
-        return HttpResponse.create(statusCode, statusText, headers, isoBytes, charset);
+        return HttpResponse.create(statusCode, statusText, headers, bodyBytes, charset);
     }
+
 
     private Charset determineCharset(String contentTypeHeader) {
         if (contentTypeHeader != null) {
