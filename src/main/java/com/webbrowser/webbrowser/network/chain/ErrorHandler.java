@@ -8,7 +8,7 @@ public class ErrorHandler extends AbstractResponseHandler {
     public HttpResponse handle(HttpResponse response) {
         if (response.isClientError() || response.isServerError()) {
 
-            if (response.getBody() != null && !response.getBody().isEmpty()) {
+            if (response.getBodyString() != null && !response.getBodyString().isEmpty()) {
                 return response;
             }
 

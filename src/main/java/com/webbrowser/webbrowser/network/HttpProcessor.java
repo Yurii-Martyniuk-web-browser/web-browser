@@ -42,23 +42,23 @@ public class HttpProcessor implements ResourceLoader {
     }
 
     @Override
-    public String loadResource(String url) {
+    public byte[] loadResource(String url) {
         try {
             HttpRequest request = HttpRequest.createGet(url);
             HttpResponse response = httpClient.sendRequest(request);
 
             if (response.isSuccessful()) {
-                return response.getBody();
+                return response.getBodyBytes();
             } else {
                 System.err.println("Failed to load resource " + url + ". Status: " + response.getStatusCode());
-                return "";
+                return new byte[0];
             }
         } catch (IllegalArgumentException e) {
             System.err.println("Invalid URL for resource: " + url);
-            return "";
+            return new byte[0];
         } catch (java.io.IOException e) {
             System.err.println("Error loading resource " + url + ": " + e.getMessage());
-            return "";
+            return new byte[0];
         }
     }
 }

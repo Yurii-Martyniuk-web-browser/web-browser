@@ -1,5 +1,7 @@
 package com.webbrowser.webbrowser.network;
 
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -8,25 +10,70 @@ public class HttpResponse {
     private final int statusCode;
     private final String statusText;
     private final Map<String, String> headers;
-    private final String body;
+    private String bodyString;
+    private final byte[] bodyBytes;
     private final HttpStatus statusClass;
+    private Charset charset = StandardCharsets.UTF_8;
 
-    private HttpResponse(int statusCode, String statusText, Map<String, String> headers, String body) {
+    private HttpResponse(int statusCode, String statusText, Map<String, String> headers, byte[] bodyBytes) {
         this.statusCode = statusCode;
         this.statusText = statusText;
         this.headers = headers != null ? headers : new HashMap<>();
-        this.body = body != null ? body : "";
+        this.bodyString = bodyBytes != null ? new String(bodyBytes, charset) : "";
+        this.bodyBytes = bodyBytes != null ? bodyBytes : new byte[0];
         this.statusClass = HttpStatus.getByCode(statusCode);
     }
 
+    private HttpResponse(int statusCode, String statusText, Map<String, String> headers, byte[] bodyBytes, Charset charset) {
+        this.statusCode = statusCode;
+        this.statusText = statusText;
+        this.headers = headers != null ? headers : new HashMap<>();
+        this.bodyString = bodyBytes != null ? new String(bodyBytes, charset) : "";
+        this.bodyBytes = bodyBytes != null ? bodyBytes : new byte[0];
+        this.statusClass = HttpStatus.getByCode(statusCode);
+    }
+
+    public void setCharset(Charset charset) {
+        if (charset != null) {
+            this.charset = charset;
+        }
+    }
+
+    public Charset getCharset() {
+        return charset;
+    }
+
+    public String getBodyString() {
+        if (bodyString == null) {
+            try {
+                bodyString = new String(bodyBytes, charset);
+            } catch (Exception e) {
+                bodyString = new String(bodyBytes, StandardCharsets.UTF_8);
+            }
+        }
+        return bodyString;
+    }
+
+    public byte[] getBodyBytes() {
+        return bodyBytes;
+    }
+
     public static HttpResponse create(int statusCode, String statusText, Map<String, String> headers, String body) {
+        return new HttpResponse(statusCode, statusText, headers, body.getBytes(StandardCharsets.UTF_8));
+    }
+
+    public static HttpResponse create(int statusCode, String statusText, Map<String, String> headers, byte[] body, Charset charset) {
         return new HttpResponse(statusCode, statusText, headers, body);
+    }
+
+    public static HttpResponse create(int statusCode, String statusText, Map<String, String> headers, String body,  Charset charset) {
+        return new HttpResponse(statusCode, statusText, headers, body.getBytes(charset),  charset);
     }
 
     public static HttpResponse ok(String body) {
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(200, "OK", headers, body);
+        return new HttpResponse(200, "OK", headers, body.getBytes());
     }
 
     public static HttpResponse notFound(String requestedPath) {
@@ -36,7 +83,7 @@ public class HttpResponse {
         );
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(404, "Not Found", headers, body);
+        return new HttpResponse(404, "Not Found", headers, body.getBytes(StandardCharsets.UTF_8));
     }
 
     public static HttpResponse serviceUnavailable(String reason) {
@@ -46,14 +93,14 @@ public class HttpResponse {
         );
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(503, "Service Unavailable", headers, body);
+        return new HttpResponse(503, "Service Unavailable", headers, body.getBytes());
     }
 
     public static HttpResponse redirect(String newLocation) {
         Map<String, String> headers = new HashMap<>();
         headers.put("Location", newLocation);
         headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(302, "Found", headers, "");
+        return new HttpResponse(302, "Found", headers, "".getBytes(StandardCharsets.UTF_8));
     }
 
     public static HttpResponse internalError(String errorDetail) {
@@ -63,7 +110,7 @@ public class HttpResponse {
         );
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(500, "Internal Server Error", headers, body);
+        return new HttpResponse(500, "Internal Server Error", headers, body.getBytes(StandardCharsets.UTF_8));
     }
 
     public static HttpResponse badRequest(String reason) {
@@ -73,8 +120,10 @@ public class HttpResponse {
         );
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(400, "Bad Request", headers, body);
+        return new HttpResponse(400, "Bad Request", headers, body.getBytes(StandardCharsets.UTF_8));
     }
+
+
 
 
     public int getStatusCode() { return statusCode; }
@@ -88,9 +137,7 @@ public class HttpResponse {
                 .orElse(null);
     }
 
-    public String getBody() { return body; }
     public HttpStatus getStatusClass() { return statusClass; }
-
 
     public boolean isSuccessful() { return statusClass == HttpStatus.SUCCESS; }
     public boolean isRedirect() { return statusClass == HttpStatus.REDIRECTION; }
@@ -108,7 +155,7 @@ public class HttpResponse {
         return "HTTP Status: " + statusCode + " " + statusText +
                 " (" + statusClass + ")" + "\n" +
                 "Headers: " + headers.size() + "\n" +
-                "Body size: " + body.length();
+                "Body size: " + bodyString.length();
     }
 
 

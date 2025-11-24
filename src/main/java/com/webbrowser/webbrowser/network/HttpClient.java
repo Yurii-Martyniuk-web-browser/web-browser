@@ -86,12 +86,12 @@ public class HttpClient {
             bodyBuilder.append(line).append("\n");
         }
 
-        byte[] isoBytes = bodyBuilder.toString().getBytes(StandardCharsets.ISO_8859_1);
+        byte[] isoBytes = bodyBuilder.toString().getBytes();
         String body = new String(isoBytes, charset);
 
         System.out.println("Body: " + body);
 
-        return HttpResponse.create(statusCode, statusText, headers, body);
+        return HttpResponse.create(statusCode, statusText, headers, isoBytes, charset);
     }
 
     private Charset determineCharset(String contentTypeHeader) {

@@ -14,6 +14,8 @@ public class ResourceFetcherVisitor implements NodeVisitor {
     private final ResourceLoader resourceLoader;
     private final String baseUrl;
     private final Map<String, String> loadedScripts = new HashMap<>();
+    private final Map<String, byte[]> loadedImages = new HashMap<>();
+
     private int inlineScriptCounter = 0;
 
     public ResourceFetcherVisitor(ResourceLoader resourceLoader, String baseUrl) {
@@ -23,6 +25,10 @@ public class ResourceFetcherVisitor implements NodeVisitor {
 
     public Map<String, String> getLoadedScripts() {
         return loadedScripts;
+    }
+
+    public Map<String, byte[]> getLoadedImages() {
+        return loadedImages;
     }
 
     @Override
@@ -37,15 +43,13 @@ public class ResourceFetcherVisitor implements NodeVisitor {
         System.out.println("attr: " + element.attr("rel"));
         System.out.println("Attributes: " + element.attributes());
 
-
-
         if (tagName.equals("link") && "stylesheet".equalsIgnoreCase(element.getAttribute("rel"))) {
             String href = element.getAttribute("href");
             if (!href.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, href);
                     System.out.println("Fetching CSS: " + absoluteUrl);
-                    String cssText = resourceLoader.loadResource(absoluteUrl);
+                    String cssText = new String(resourceLoader.loadResource(absoluteUrl));
                     if (!cssText.isEmpty()) {
                         CssStorage.addGlobalStyles(cssText);
                     }
@@ -56,9 +60,12 @@ public class ResourceFetcherVisitor implements NodeVisitor {
         }
         else if (tagName.equals("img")) {
             String src = element.getAttribute("src");
+            System.out.println("src in fetcher: " + src);
             if (!src.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
+                    byte[] image = resourceLoader.loadResource(absoluteUrl);
+                    loadedImages.put(absoluteUrl, image);
                     element.attributes().put("src", absoluteUrl);
                 } catch (Exception ignored) {}
             }
@@ -71,7 +78,7 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
                     System.out.println("Fetching JS: " + absoluteUrl);
-                    String jsCode = resourceLoader.loadResource(absoluteUrl);
+                    String jsCode = new String(resourceLoader.loadResource(absoluteUrl));
                     if (!jsCode.isEmpty()) {
                         loadedScripts.put(absoluteUrl, jsCode);
                     }

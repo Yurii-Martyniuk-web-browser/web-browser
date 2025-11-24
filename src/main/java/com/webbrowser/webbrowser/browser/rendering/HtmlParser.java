@@ -28,11 +28,8 @@ public class HtmlParser {
     }
 
     private String preprocessHtml(String html) {
-        html = html.replaceAll("<!(?i)DOCTYPE[^>]*>", "");
-
-//        html = html.replaceAll("(?i)<script[\\s\\S]*?</script>", "");
-//        html = html.replaceAll("(?i)<style[\\s\\S]*?</style>", "");
-
+        html = html.replaceAll("<!(?i)DOCTYPE[^>]*>", "")
+                .replaceAll("<!--[\\s\\S]*?-->", "");
         return html;
     }
 

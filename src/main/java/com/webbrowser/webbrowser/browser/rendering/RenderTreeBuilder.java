@@ -14,6 +14,8 @@ public class RenderTreeBuilder {
             "head", "script", "style", "meta", "link", "title", "noscript", "iframe", "svg", "path"
     );
 
+    private Map<String, byte[]> images;
+
     public RenderNode build(com.webbrowser.webbrowser.browser.rendering.dom.Document doc) {
         return convert(doc.getRoot());
     }
@@ -42,7 +44,9 @@ public class RenderTreeBuilder {
 
             case "img" -> {
                 rn.type = RenderNode.Type.IMAGE;
-                rn.src = el.attr("src");
+                System.out.println("Src in treebuilder:" + el.getAttribute("src"));
+                rn.src = el.getAttribute("src");
+                rn.image = images.get(rn.src);
             }
 
             default -> rn.type = RenderNode.Type.INLINE;
@@ -72,5 +76,9 @@ public class RenderTreeBuilder {
             return ((StyleContext) contextObj).getStyleProperties();
         }
         return new java.util.HashMap<>();
+    }
+
+    public void setImages(Map<String, byte[]> images) {
+        this.images = images;
     }
 }

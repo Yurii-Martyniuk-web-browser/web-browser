@@ -17,7 +17,7 @@ public abstract class PageLoadTemplate {
             return;
         }
 
-        Document domDocument = parseHtml(response.getBody());
+        Document domDocument = parseHtml(response.getBodyString());
 
         fetchResources(domDocument);
 

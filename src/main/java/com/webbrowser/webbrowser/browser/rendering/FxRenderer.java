@@ -8,6 +8,7 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
+import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -107,12 +108,52 @@ public class FxRenderer {
             case TEXT -> new Text(rn.text);
 
             case IMAGE -> {
-                try {
-                    ImageView iv = new ImageView(new Image(rn.src, true));
-                    iv.setFitWidth(200);
-                    iv.setPreserveRatio(true);
-                    yield iv;
-                } catch (Exception e) { yield new Label("[Img Err]"); }
+                // === ВИПРАВЛЕННЯ РЕНДЕРИНГУ ЗОБРАЖЕННЯ ===
+                if (rn.image != null && rn.image.length > 0) {
+                    try {
+                        System.out.println("Rendering image from bytes, size: " + rn.image.length);
+
+                        // 1. Створюємо потік
+                        ByteArrayInputStream bis = new ByteArrayInputStream(rn.image);
+
+                        // 2. Створюємо Image
+                        Image img = new Image(bis);
+
+                        // 3. Перевіряємо на помилки завантаження (битий формат)
+                        if (img.isError()) {
+                            System.err.println("Image load error: " + img.getException());
+                            yield new Label("[Img Format Error]");
+                        }
+
+                        // 4. Створюємо ImageView
+                        ImageView iv = new ImageView(img);
+
+                        // 5. Налаштування розмірів (критично важливо!)
+                        // Якщо в CSS задано width/height - беремо їх. Якщо ні - беремо розмір картинки.
+                        // Але часто зручно обмежити максимальну ширину, щоб не порвало верстку.
+                        iv.setPreserveRatio(true);
+
+                        // Перевіряємо стилі
+                        if (rn.style.containsKey("width")) {
+                            // Тут треба парсити пікселі, спрощено:
+                            // iv.setFitWidth(...);
+                        } else {
+                            // Дефолтне обмеження, якщо немає стилів
+                            if (img.getWidth() > 800) {
+                                iv.setFitWidth(800);
+                            }
+                        }
+
+                        yield iv;
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        yield new Label("[Img Exception]");
+                    }
+                } else {
+                    System.out.println("Image bytes are null or empty for src: " + rn.src);
+                    yield new Label("[Img Missing]");
+                }
             }
 
             case TABLE -> renderTable(rn);

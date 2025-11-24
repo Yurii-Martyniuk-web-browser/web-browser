@@ -8,5 +8,6 @@ public class RenderNode {
     public String text;
     public String src;
     public Map<String,String> style = new HashMap<>();
+    public byte[] image;
     public List<RenderNode> children = new ArrayList<>();
 }
