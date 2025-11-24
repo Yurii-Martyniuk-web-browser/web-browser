@@ -5,12 +5,17 @@ import com.webbrowser.webbrowser.network.chain.RedirectHandler;
 import com.webbrowser.webbrowser.network.chain.ResponseHandler;
 
 import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class HttpProcessor implements ResourceLoader {
 
     private final HttpClient httpClient;
     private final RedirectHandler redirectHandler;
     private final ResponseHandler chainStart;
+    private final ExecutorService executor;
+
 
     public HttpProcessor() {
         this.httpClient = new HttpClient();
@@ -21,6 +26,8 @@ public class HttpProcessor implements ResourceLoader {
         redirectHandler.setNextHandler(errorHandler);
 
         this.chainStart = redirectHandler;
+        this.executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+
     }
 
     public HttpResponse loadUrl(String url) throws IllegalArgumentException {
@@ -60,5 +67,10 @@ public class HttpProcessor implements ResourceLoader {
             System.err.println("Error loading resource " + url + ": " + e.getMessage());
             return new byte[0];
         }
+    }
+
+    @Override
+    public CompletableFuture<byte[]> loadResourceAsync(String url) {
+        return CompletableFuture.supplyAsync(() -> loadResource(url), executor);
     }
 }

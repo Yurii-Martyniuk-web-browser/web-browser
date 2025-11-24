@@ -11,11 +11,10 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
 import java.net.URL;
-import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.concurrent.CompletableFuture;
 
 public class BrowserPageLoader extends PageLoadTemplate {
 
@@ -28,6 +27,8 @@ public class BrowserPageLoader extends PageLoadTemplate {
 
     private final Map<String, String> loadedScripts = new HashMap<>();
     private String currentBaseUrl;
+
+    private List<CompletableFuture<?>> resources;
 
     public BrowserPageLoader(VBox viewPort, StringProperty titleProperty) {
         this.httpProcessor = new HttpProcessor();
@@ -81,8 +82,11 @@ public class BrowserPageLoader extends PageLoadTemplate {
 
         }
 
+        System.err.println("Images empty = " + resourceVisitor.getLoadedImages().isEmpty());
+
         this.loadedScripts.putAll(resourceVisitor.getLoadedScripts());
         this.renderTreeBuilder.setImages(resourceVisitor.getLoadedImages());
+
     }
 
     @Override
@@ -115,24 +119,4 @@ public class BrowserPageLoader extends PageLoadTemplate {
             viewPort.getChildren().add(new Label("Error: " + response.getStatusCode()));
         });
     }
-
-//    private Map<String, byte[]> decodeImages(Map<String, byte[]> encodedImages) {
-//        if (encodedImages == null) {
-//            return new HashMap<>();
-//        }
-//
-//        return encodedImages.entrySet().stream()
-//                .collect(Collectors.toMap(
-//                        Map.Entry::getKey, // URL залишається ключем
-//                        entry -> {
-//                            try {
-//                                // Декодуємо рядок Base64 у byte[]
-//                                return Base64.getEncoder().encode(entry.getValue());
-//                            } catch (IllegalArgumentException e) {
-//                                System.err.println("Помилка декодування Base64 для URL: " + entry.getKey());
-//                                return new byte[0]; // Повертаємо пустий масив у разі помилки
-//                            }
-//                        }
-//                ));
-//    }
 }

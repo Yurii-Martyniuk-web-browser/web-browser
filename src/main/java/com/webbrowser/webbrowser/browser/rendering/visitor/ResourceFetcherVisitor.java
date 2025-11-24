@@ -6,8 +6,11 @@ import com.webbrowser.webbrowser.browser.rendering.dom.Node;
 import com.webbrowser.webbrowser.network.ResourceLoader;
 import com.webbrowser.webbrowser.network.UrlResolver;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class ResourceFetcherVisitor implements NodeVisitor {
 
@@ -15,8 +18,9 @@ public class ResourceFetcherVisitor implements NodeVisitor {
     private final String baseUrl;
     private final Map<String, String> loadedScripts = new HashMap<>();
     private final Map<String, byte[]> loadedImages = new HashMap<>();
-
     private int inlineScriptCounter = 0;
+
+    private final List<CompletableFuture<?>> pendingTasks = new ArrayList<>();
 
     public ResourceFetcherVisitor(ResourceLoader resourceLoader, String baseUrl) {
         this.resourceLoader = resourceLoader;
@@ -28,6 +32,9 @@ public class ResourceFetcherVisitor implements NodeVisitor {
     }
 
     public Map<String, byte[]> getLoadedImages() {
+        CompletableFuture.allOf(pendingTasks.toArray(new CompletableFuture<?>[0]))
+                .join();
+
         return loadedImages;
     }
 
@@ -49,10 +56,18 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, href);
                     System.out.println("Fetching CSS: " + absoluteUrl);
-                    String cssText = new String(resourceLoader.loadResource(absoluteUrl));
-                    if (!cssText.isEmpty()) {
-                        CssStorage.addGlobalStyles(cssText);
-                    }
+                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
+
+                    pendingTasks.add(future);
+
+                    future.thenAccept(bytes -> {
+                                if (bytes != null && bytes.length > 0) {
+                                    CssStorage.addGlobalStyles(new String(bytes));
+                                    System.out.println("Loaded async css: " + absoluteUrl);
+                                } else  {
+                                    System.out.println("Failed to load async css: " + absoluteUrl);
+                                }
+                            });
                 } catch (Exception e) {
                     System.err.println("Failed to load CSS: " + href);
                 }
@@ -64,9 +79,19 @@ public class ResourceFetcherVisitor implements NodeVisitor {
             if (!src.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
-                    byte[] image = resourceLoader.loadResource(absoluteUrl);
-                    loadedImages.put(absoluteUrl, image);
-                    element.attributes().put("src", absoluteUrl);
+                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
+
+                    pendingTasks.add(future);
+
+                    future.thenAccept(bytes -> {
+                                if (bytes != null && bytes.length > 0) {
+                                    loadedImages.put(absoluteUrl, bytes);
+                                    element.attributes().put("src", absoluteUrl);
+                                    System.out.println("Loaded async image: " + absoluteUrl);
+                                } else  {
+                                    System.out.println("Failed to load async image: " + absoluteUrl);
+                                }
+                            });
                 } catch (Exception ignored) {}
             }
         }
@@ -78,10 +103,19 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
                     System.out.println("Fetching JS: " + absoluteUrl);
-                    String jsCode = new String(resourceLoader.loadResource(absoluteUrl));
-                    if (!jsCode.isEmpty()) {
-                        loadedScripts.put(absoluteUrl, jsCode);
-                    }
+                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
+
+                    pendingTasks.add(future);
+
+                    future.thenAccept(bytes -> {
+                                if (bytes != null && bytes.length > 0) {
+                                    loadedScripts.put(absoluteUrl, new String(bytes));
+                                    element.attributes().put("src", absoluteUrl);
+                                    System.out.println("Loaded async script: " + absoluteUrl);
+                                } else  {
+                                    System.out.println("Failed to load async script: " + absoluteUrl);
+                                }
+                            });
                 } catch (Exception e) {
                     System.err.println("Failed to load JS: " + src);
                 }
