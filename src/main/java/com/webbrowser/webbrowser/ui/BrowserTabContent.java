@@ -1,6 +1,7 @@
 package com.webbrowser.webbrowser.ui;
 
 import com.webbrowser.webbrowser.browser.core.BrowserPageLoader;
+import com.webbrowser.webbrowser.service.RestApiClient;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.geometry.Insets;
@@ -18,6 +19,7 @@ public class BrowserTabContent {
     private final TextField addressBar;
     private final BrowserPageLoader pageLoader;
     private final StringProperty titleProperty = new SimpleStringProperty("New Tab");
+    private final RestApiClient restApiClient = new RestApiClient();
 
     public BrowserTabContent() {
         VBox viewPort = new VBox(10);
@@ -72,6 +74,7 @@ public class BrowserTabContent {
         pageLoader.clearScripts();
 
         final String finalUrl = url;
+        restApiClient.saveVisitAsync(finalUrl, "");
         new Thread(() -> pageLoader.loadAndRender(finalUrl)).start();
     }
 }

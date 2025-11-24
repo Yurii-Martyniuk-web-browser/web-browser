@@ -2,6 +2,7 @@ package com.webbrowser.webbrowser.service;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.webbrowser.webbrowser.config.ApiConfig;
 import com.webbrowser.webbrowser.dto.*;
 
 import java.net.URI;
@@ -13,7 +14,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class RestApiClient {
     // Змініть порт/назву файлу відповідно до вашого деплою
-    private static final String BASE_URL = "http://localhost:8080/rest-service-1.0-SNAPSHOT/api";
+    private static final String BASE_URL = ApiConfig.getApiUrl();
 
     private final HttpClient client;
     private final Gson gson;
