@@ -9,6 +9,11 @@ public record SnapshotResponse(
         List<ImageDto> images
 ) {
 
-    public record ResourceDto(String url, String content) {}
-    public record ImageDto(String url, byte[] content) {}
+    public record ResourceDto(
+            String url,
+            String content) {}
+
+    public record ImageDto(
+            String url,
+            byte[] content) {}
 }

@@ -1,6 +1,7 @@
 package com.webbrowser.webbrowser.service;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 import com.webbrowser.webbrowser.config.ApiConfig;
 import com.webbrowser.webbrowser.dto.*;
@@ -21,7 +22,9 @@ public class RestApiClient {
 
     public RestApiClient() {
         this.client = HttpClient.newHttpClient();
-        this.gson = new Gson();
+        this.gson = new GsonBuilder()
+                .registerTypeAdapter(byte[].class, new ByteArrayAdapter())
+                .create();
     }
 
     // --- AUTH ---
@@ -52,7 +55,7 @@ public class RestApiClient {
 
     // --- RESOURCES ---
     public CompletableFuture<SnapshotResponse> getSnapshot(Long historyId) {
-        return sendGetRequest("/resources/snapshot/" + historyId)
+        return sendGetRequest("/snapshot/" + historyId)
                 .thenApply(json -> gson.fromJson(json, SnapshotResponse.class));
     }
 
