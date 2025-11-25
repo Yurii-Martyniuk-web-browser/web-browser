@@ -15,6 +15,7 @@ import java.util.Map;
 
 public class FxRenderer {
 
+    // метод, який використовується в зовнішньому класі користувача та всередині цього класу
     public Node render(RenderNode rn) {
         return switch (rn.type) {
             case BLOCK -> renderBlock(rn);

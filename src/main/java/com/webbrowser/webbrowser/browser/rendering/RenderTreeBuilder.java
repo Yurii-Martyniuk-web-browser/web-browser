@@ -16,6 +16,7 @@ public class RenderTreeBuilder {
 
     private Map<String, byte[]> images;
 
+    // метод, який використовується в зовнішньому класі користувача
     public RenderNode build(com.webbrowser.webbrowser.browser.rendering.dom.Document doc) {
         return convert(doc.getRoot());
     }
