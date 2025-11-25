@@ -4,7 +4,6 @@ import com.webbrowser.webbrowser.dto.HistoryItemDto;
 import com.webbrowser.webbrowser.service.RestApiClient;
 import com.webbrowser.webbrowser.service.UserSession;
 import javafx.application.Platform;
-import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -17,7 +16,7 @@ public class HistoryView {
     private final RestApiClient apiClient = new RestApiClient();
 
     public void show() {
-        if (!UserSession.getInstance().isLoggedIn()) {
+        if (UserSession.getInstance().isLoggedIn()) {
             new Alert(Alert.AlertType.WARNING, "Please login first!").show();
             return;
         }
@@ -47,9 +46,8 @@ public class HistoryView {
                 new SimpleStringProperty(cellData.getValue().url())
         );
 
-        table.getColumns().addAll(idCol, timeCol, titleCol, urlCol);
+        table.getColumns().addAll(List.of(idCol, timeCol, titleCol, urlCol));
 
-        // Кнопка для перегляду снапшоту
         Button viewSnapshotBtn = new Button("View Saved Resources (Snapshot)");
         viewSnapshotBtn.setOnAction(e -> {
             HistoryItemDto selected = table.getSelectionModel().getSelectedItem();
@@ -58,7 +56,6 @@ public class HistoryView {
             }
         });
 
-        // Завантаження даних
         apiClient.getHistory().thenAccept(list -> Platform.runLater(() ->
                 table.getItems().setAll(list)
         ));

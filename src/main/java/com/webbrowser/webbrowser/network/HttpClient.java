@@ -44,6 +44,7 @@ public class HttpClient {
                 try {
                     socket.close();
                 } catch (IOException e) {
+
                 }
             }
         }
@@ -54,16 +55,13 @@ public class HttpClient {
         ByteArrayOutputStream headerBuffer = new ByteArrayOutputStream();
         int prev = -1, curr;
 
-        // 1. Read headers manually byte-by-byte until CRLF CRLF
         while ((curr = input.read()) != -1) {
             headerBuffer.write(curr);
 
-            // detect \r\n\r\n
             if (prev == '\r' && curr == '\n') {
                 byte[] hb = headerBuffer.toByteArray();
                 int len = hb.length;
 
-                // check last 4 bytes = \r\n\r\n
                 if (len >= 4 &&
                         hb[len - 4] == '\r' &&
                         hb[len - 3] == '\n' &&
@@ -77,16 +75,13 @@ public class HttpClient {
             prev = curr;
         }
 
-        // parse header string
-        String headerText = new String(headerBuffer.toByteArray(), StandardCharsets.ISO_8859_1);
+        String headerText = headerBuffer.toString(StandardCharsets.ISO_8859_1);
         String[] headerLines = headerText.split("\r\n");
 
-        // --- STATUS LINE ---
         String[] statusParts = headerLines[0].split(" ", 3);
         int statusCode = Integer.parseInt(statusParts[1]);
         String statusText = statusParts[2];
 
-        // --- HEADERS ---
         Map<String, String> headers = new HashMap<>();
         for (int i = 1; i < headerLines.length; i++) {
             String line = headerLines[i];
@@ -99,11 +94,9 @@ public class HttpClient {
             }
         }
 
-        // determine charset
         String contentType = headers.getOrDefault("Content-Type", "");
         Charset charset = determineCharset(contentType);
 
-        // 2. Now read body RAW
         ByteArrayOutputStream bodyBuffer = new ByteArrayOutputStream();
         byte[] buf = new byte[8192];
         int read;

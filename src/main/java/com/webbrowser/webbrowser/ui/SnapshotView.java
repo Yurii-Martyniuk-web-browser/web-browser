@@ -33,22 +33,21 @@ public class SnapshotView {
                 return;
             }
 
-            // 1. HTML Tab
             addTab(tabPane, "HTML", snapshot.mainHtml());
 
-            // 2. CSS Tabs
             if (snapshot.css() != null) {
-                snapshot.css().forEach(css -> addTab(tabPane, "CSS: " + getFileName(css.url()), css.content()));
+                snapshot.css().
+                        forEach(css -> addTab(tabPane, "CSS: " + getFileName(css.url()), css.content()));
             }
 
-            // 3. JS Tabs
             if (snapshot.js() != null) {
-                snapshot.js().forEach(js -> addTab(tabPane, "JS: " + getFileName(js.url()), js.content()));
+                snapshot.js()
+                        .forEach(js -> addTab(tabPane, "JS: " + getFileName(js.url()), js.content()));
             }
 
-            // (Можна додати вкладку для картинок, якщо потрібно)
             if (snapshot.images() != null) {
-                snapshot.images().forEach(image -> addImageTab(tabPane, "IMAGES: " + getFileName(image.url()), image.content()));
+                snapshot.images()
+                        .forEach(image -> addImageTab(tabPane, "IMAGES: " + getFileName(image.url()), image.content()));
             }
         }));
 
@@ -65,16 +64,12 @@ public class SnapshotView {
     }
 
     private void addImageTab(TabPane pane, String title, byte[] imageBytes) {
-        // 1. Створюємо потік з масиву байтів
         ByteArrayInputStream inputStream = new ByteArrayInputStream(imageBytes);
 
-        // 2. Створюємо об'єкт Image
         Image image = new Image(inputStream);
 
-        // 3. Створюємо ImageView для відображення
         ScrollPane scrollPane = getScrollPane(image);
 
-        // 5. Створюємо нову вкладку і додаємо її до панелі
         Tab tab = new Tab(title);
         tab.setContent(scrollPane);
 
@@ -84,17 +79,14 @@ public class SnapshotView {
     private static ScrollPane getScrollPane(Image image) {
         ImageView imageView = new ImageView(image);
 
-        // Опціонально: налаштування збереження пропорцій при зміні розміру вікна
         imageView.setPreserveRatio(true);
 
-        // 4. Огортаємо ImageView у ScrollPane, щоб можна було прокручувати великі зображення
         ScrollPane scrollPane = new ScrollPane(imageView);
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
 
-        // Опціонально: центрування зображення
         StackPane centerPane = new StackPane(imageView);
-        centerPane.setStyle("-fx-background-color: #f4f4f4;"); // Світло-сірий фон
+        centerPane.setStyle("-fx-background-color: #f4f4f4;");
         scrollPane.setContent(centerPane);
         return scrollPane;
     }

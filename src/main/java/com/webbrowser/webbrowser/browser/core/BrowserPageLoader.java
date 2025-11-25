@@ -10,11 +10,9 @@ import javafx.beans.property.StringProperty;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
 public class BrowserPageLoader extends PageLoadTemplate {
 
@@ -27,8 +25,6 @@ public class BrowserPageLoader extends PageLoadTemplate {
 
     private final Map<String, String> loadedScripts = new HashMap<>();
     private String currentBaseUrl;
-
-    private List<CompletableFuture<?>> resources;
 
     public BrowserPageLoader(VBox viewPort, StringProperty titleProperty) {
         this.httpProcessor = new HttpProcessor();
@@ -50,7 +46,10 @@ public class BrowserPageLoader extends PageLoadTemplate {
     @Override
     protected HttpResponse fetchHttpResponse(String url) {
         try {
-            this.currentBaseUrl = new URL(url).toExternalForm();
+            this.currentBaseUrl = URI.create(url).
+                    toURL()
+                    .toExternalForm();
+
         } catch (java.net.MalformedURLException e) {
             System.err.println("Invalid URL format for base URL: " + url);
         }

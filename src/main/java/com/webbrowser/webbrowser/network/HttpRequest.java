@@ -1,5 +1,6 @@
 package com.webbrowser.webbrowser.network;
 
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,7 +11,11 @@ public class HttpRequest {
     private final Map<String, String> headers;
     private final boolean isSecure;
 
-    private HttpRequest(String method, String host, String path, boolean isSecure) {
+    private HttpRequest(String method,
+                        String host,
+                        String path,
+                        boolean isSecure) {
+
         this.method = method;
         this.host = host;
         this.path = path;
@@ -23,7 +28,7 @@ public class HttpRequest {
 
     public static HttpRequest createGet(String url) throws IllegalArgumentException {
         try {
-            java.net.URL urlObj = new java.net.URL(url);
+            java.net.URL urlObj = URI.create(url).toURL();
             String protocol = urlObj.getProtocol();
             boolean secure = protocol.equalsIgnoreCase("https");
 
@@ -38,13 +43,17 @@ public class HttpRequest {
         }
     }
 
-    public String getHost() { return host; }
+    public String getHost() {
+        return host;
+    }
 
     public int getPort() {
         return isSecure ? 443 : 80;
     }
 
-    public boolean isSecure() { return isSecure; }
+    public boolean isSecure() {
+        return isSecure;
+    }
 
     public String toRequestString() {
         StringBuilder sb = new StringBuilder();

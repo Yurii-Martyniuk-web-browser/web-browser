@@ -10,11 +10,9 @@ public class UserSession {
     private Long userId;
     private String email;
 
-    // Приватний конструктор
     private UserSession() {
         this.repository = new ClientSessionRepository();
 
-        // Спроба автоматичного входу при запуску
         var savedSession = repository.loadSession();
         if (savedSession != null) {
             this.userId = savedSession.userId();
@@ -33,14 +31,12 @@ public class UserSession {
     public void login(Long userId, String email) {
         this.userId = userId;
         this.email = email;
-        // Зберігаємо в файл
         repository.saveSession(userId, email);
     }
 
     public void logout() {
         this.userId = null;
         this.email = null;
-        // Видаляємо з файлу
         repository.clearSession();
     }
 

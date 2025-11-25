@@ -2,6 +2,7 @@ package com.webbrowser.webbrowser.network;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -10,37 +11,147 @@ public class HttpResponse {
     private final int statusCode;
     private final String statusText;
     private final Map<String, String> headers;
-    private String bodyString;
     private final byte[] bodyBytes;
+
+    private Charset charset;
+    private String bodyString;
     private final HttpStatus statusClass;
-    private Charset charset = StandardCharsets.UTF_8;
 
-    private HttpResponse(int statusCode, String statusText, Map<String, String> headers, byte[] bodyBytes) {
+    private HttpResponse(int statusCode,
+                         String statusText,
+                         Map<String, String> headers,
+                         byte[] bodyBytes,
+                         Charset charset) {
+
         this.statusCode = statusCode;
-        this.statusText = statusText;
-        this.headers = headers != null ? headers : new HashMap<>();
-        this.bodyString = bodyBytes != null ? new String(bodyBytes, charset) : "";
+        this.statusText = statusText != null ? statusText : "";
+        this.headers = headers != null ? new HashMap<>(headers) : new HashMap<>();
         this.bodyBytes = bodyBytes != null ? bodyBytes : new byte[0];
+        this.charset = charset != null ? charset : StandardCharsets.UTF_8;
         this.statusClass = HttpStatus.getByCode(statusCode);
+        this.bodyString = null;
     }
 
-    private HttpResponse(int statusCode, String statusText, Map<String, String> headers, byte[] bodyBytes, Charset charset) {
-        this.statusCode = statusCode;
-        this.statusText = statusText;
-        this.headers = headers != null ? headers : new HashMap<>();
-        this.bodyString = bodyBytes != null ? new String(bodyBytes, charset) : "";
-        this.bodyBytes = bodyBytes != null ? bodyBytes : new byte[0];
-        this.statusClass = HttpStatus.getByCode(statusCode);
+    public static HttpResponse create(int statusCode,
+                                      String statusText,
+                                      Map<String, String> headers,
+                                      byte[] body,
+                                      Charset charset) {
+
+        return new HttpResponse(statusCode, statusText, headers, body, charset);
     }
 
-    public void setCharset(Charset charset) {
-        if (charset != null) {
-            this.charset = charset;
-        }
+    public static HttpResponse create(int statusCode,
+                                      String statusText,
+                                      Map<String, String> headers,
+                                      String body) {
+
+        byte[] bytes = body != null ? body.getBytes(StandardCharsets.UTF_8) : new byte[0];
+        return new HttpResponse(statusCode, statusText, headers, bytes, StandardCharsets.UTF_8);
+    }
+
+    public static HttpResponse create(int statusCode,
+                                      String statusText,
+                                      Map<String, String> headers,
+                                      String body,
+                                      Charset charset) {
+
+        Charset cs = charset != null ? charset : StandardCharsets.UTF_8;
+        byte[] bytes = body != null ? body.getBytes(cs) : new byte[0];
+        return new HttpResponse(statusCode, statusText, headers, bytes, cs);
+    }
+
+    public static HttpResponse create(int statusCode,
+                                      String statusText,
+                                      Map<String, String> headers,
+                                      byte[] body) {
+
+        return new HttpResponse(statusCode, statusText, headers, body, StandardCharsets.UTF_8);
+    }
+
+    public static HttpResponse ok(String body) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "text/html; charset=utf-8");
+        return create(200, "OK", headers, body != null ? body.getBytes(StandardCharsets.UTF_8) : new byte[0], StandardCharsets.UTF_8);
+    }
+
+    public static HttpResponse notFound(String requestedPath) {
+        String body = String.format(
+                "<html><body><h1>404 Not Found</h1><p>The requested URL <strong>%s</strong> was not found on this server.</p></body></html>",
+                requestedPath
+        );
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "text/html; charset=utf-8");
+        return create(404, "Not Found", headers, body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
+
+    public static HttpResponse serviceUnavailable(String reason) {
+        String body = String.format(
+                "<html><body><h1>503 Service Unavailable</h1><p>The server is temporarily unable to service your request: <strong>%s</strong></p></body></html>",
+                reason
+        );
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "text/html; charset=utf-8");
+        return create(503, "Service Unavailable", headers, body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
+
+    public static HttpResponse redirect(String newLocation) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Location", newLocation);
+        headers.put("Content-Type", "text/html; charset=utf-8");
+        return create(302, "Found", headers, new byte[0], StandardCharsets.UTF_8);
+    }
+
+    public static HttpResponse internalError(String errorDetail) {
+        String body = String.format(
+                "<html><body><h1>500 Internal Server Error</h1><p>An unexpected error occurred: <strong>%s</strong></p></body></html>",
+                errorDetail
+        );
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "text/html; charset=utf-8");
+        return create(500, "Internal Server Error", headers, body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
+
+    public static HttpResponse badRequest(String reason) {
+        String body = String.format(
+                "<html><body><h1>400 Bad Request</h1><p>The request could not be understood by the server due to malformed syntax: <strong>%s</strong></p></body></html>",
+                reason
+        );
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Content-Type", "text/html; charset=utf-8");
+        return create(400, "Bad Request", headers, body.getBytes(StandardCharsets.UTF_8), StandardCharsets.UTF_8);
+    }
+
+    public int getStatusCode() {
+        return statusCode;
+    }
+
+    public String getStatusText() {
+        return statusText;
+    }
+
+    public Map<String, String> getHeaders() {
+        return Collections.unmodifiableMap(headers);
+    }
+
+    public String getHeader(String name) {
+        if (name == null) return null;
+        return headers.entrySet().stream()
+                .filter(entry -> entry.getKey().equalsIgnoreCase(name))
+                .map(Map.Entry::getValue)
+                .findFirst()
+                .orElse(null);
     }
 
     public Charset getCharset() {
         return charset;
+    }
+
+    public void setCharset(Charset charset) {
+        if (charset != null && !charset.equals(this.charset)) {
+            this.charset = charset;
+            this.bodyString = null;
+        }
     }
 
     public String getBodyString() {
@@ -58,106 +169,53 @@ public class HttpResponse {
         return bodyBytes;
     }
 
-    public static HttpResponse create(int statusCode, String statusText, Map<String, String> headers, String body) {
-        return new HttpResponse(statusCode, statusText, headers, body.getBytes(StandardCharsets.UTF_8));
+    public HttpStatus getStatusClass() {
+        return statusClass;
     }
 
-    public static HttpResponse create(int statusCode, String statusText, Map<String, String> headers, byte[] body, Charset charset) {
-        return new HttpResponse(statusCode, statusText, headers, body);
+    public boolean isSuccessful() {
+        return statusClass == HttpStatus.SUCCESS;
     }
 
-    public static HttpResponse create(int statusCode, String statusText, Map<String, String> headers, String body,  Charset charset) {
-        return new HttpResponse(statusCode, statusText, headers, body.getBytes(charset),  charset);
+    public boolean isRedirect() {
+        return statusClass == HttpStatus.REDIRECTION;
     }
 
-    public static HttpResponse ok(String body) {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(200, "OK", headers, body.getBytes());
+    public boolean isClientError() {
+        return statusClass == HttpStatus.CLIENT_ERROR;
     }
 
-    public static HttpResponse notFound(String requestedPath) {
-        String body = String.format(
-                "<html><body><h1>404 Not Found</h1><p>The requested URL <strong>%s</strong> was not found on this server.</p></body></html>",
-                requestedPath
-        );
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(404, "Not Found", headers, body.getBytes(StandardCharsets.UTF_8));
+    public boolean isServerError() {
+        return statusClass == HttpStatus.SERVER_ERROR;
     }
 
-    public static HttpResponse serviceUnavailable(String reason) {
-        String body = String.format(
-                "<html><body><h1>503 Service Unavailable</h1><p>The server is temporarily unable to service your request: <strong>%s</strong></p></body></html>",
-                reason
-        );
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(503, "Service Unavailable", headers, body.getBytes());
+    public boolean isOk() {
+        return statusCode == 200;
     }
 
-    public static HttpResponse redirect(String newLocation) {
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Location", newLocation);
-        headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(302, "Found", headers, "".getBytes(StandardCharsets.UTF_8));
+    public boolean isNotFound() {
+        return statusCode == 404;
     }
 
-    public static HttpResponse internalError(String errorDetail) {
-        String body = String.format(
-                "<html><body><h1>500 Internal Server Error</h1><p>An unexpected error occurred: <strong>%s</strong></p></body></html>",
-                errorDetail
-        );
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(500, "Internal Server Error", headers, body.getBytes(StandardCharsets.UTF_8));
+    public boolean isServiceUnavailable() {
+        return statusCode == 503;
     }
 
-    public static HttpResponse badRequest(String reason) {
-        String body = String.format(
-                "<html><body><h1>400 Bad Request</h1><p>The request could not be understood by the server due to malformed syntax: <strong>%s</strong></p></body></html>",
-                reason
-        );
-        Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "text/html; charset=utf-8");
-        return new HttpResponse(400, "Bad Request", headers, body.getBytes(StandardCharsets.UTF_8));
+    public boolean isBadRequest() {
+        return statusCode == 400;
     }
 
-
-
-
-    public int getStatusCode() { return statusCode; }
-    public String getStatusText() { return this.statusText; }
-
-    public String getHeader(String name) {
-        return headers.entrySet().stream()
-                .filter(entry -> entry.getKey().equalsIgnoreCase(name))
-                .map(Map.Entry::getValue)
-                .findFirst()
-                .orElse(null);
+    public boolean isBadGateway() {
+        return statusCode == 502;
     }
-
-    public HttpStatus getStatusClass() { return statusClass; }
-
-    public boolean isSuccessful() { return statusClass == HttpStatus.SUCCESS; }
-    public boolean isRedirect() { return statusClass == HttpStatus.REDIRECTION; }
-    public boolean isClientError() { return statusClass == HttpStatus.CLIENT_ERROR; }
-    public boolean isServerError() { return statusClass == HttpStatus.SERVER_ERROR; }
-
-    public boolean isOk() { return statusCode == 200; }
-    public boolean isNotFound() { return statusCode == 404; }
-    public boolean isServiceUnavailable() { return statusCode == 503; }
-    public boolean isBadRequest() { return statusCode == 400; }
-    public boolean isBadGateway() { return statusCode == 502; }
 
     @Override
     public String toString() {
         return "HTTP Status: " + statusCode + " " + statusText +
                 " (" + statusClass + ")" + "\n" +
                 "Headers: " + headers.size() + "\n" +
-                "Body size: " + bodyString.length();
+                "Body size: " + bodyBytes.length;
     }
-
 
     public enum HttpStatus {
         SUCCESS(200, 299),

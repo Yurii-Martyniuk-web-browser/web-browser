@@ -8,7 +8,6 @@ public class UrlResolver {
     public static String resolve(String baseUrl, String relativeUrl) {
         if (relativeUrl == null || relativeUrl.isEmpty()) return "";
 
-        // Обробка protocol-relative URLs (популярно на Вікіпедії: //upload.wikimedia...)
         if (relativeUrl.startsWith("//")) {
             if (baseUrl.startsWith("https:")) return "https:" + relativeUrl;
             return "http:" + relativeUrl;

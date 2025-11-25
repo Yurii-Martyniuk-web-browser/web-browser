@@ -11,11 +11,10 @@ public class CssApplierVisitor implements NodeVisitor {
 
     @Override
     public void head(Node node) {
-        if (!(node instanceof Element)) {
+        if (!(node instanceof Element element)) {
             return;
         }
 
-        Element element = (Element) node;
         StyleContext context = new StyleContext();
         String tagName = element.tagName().toLowerCase();
 

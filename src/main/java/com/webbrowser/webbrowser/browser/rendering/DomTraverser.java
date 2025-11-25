@@ -5,6 +5,7 @@ import com.webbrowser.webbrowser.browser.rendering.dom.Node;
 import com.webbrowser.webbrowser.browser.rendering.visitor.NodeVisitor;
 
 public class DomTraverser {
+
     public static void traverse(Node node, NodeVisitor visitor) {
         if (node == null) return;
 

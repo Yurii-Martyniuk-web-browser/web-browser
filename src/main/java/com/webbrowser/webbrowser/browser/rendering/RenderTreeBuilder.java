@@ -28,8 +28,7 @@ public class RenderTreeBuilder {
             return rn;
         }
 
-        if (!(node instanceof Element)) return null;
-        Element el = (Element) node;
+        if (!(node instanceof Element el)) return null;
         String tagName = el.tagName();
 
         if (IGNORED_TAGS.contains(tagName)) return null;

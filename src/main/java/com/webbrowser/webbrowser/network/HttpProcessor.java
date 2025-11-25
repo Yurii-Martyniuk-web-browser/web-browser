@@ -12,7 +12,6 @@ import java.util.concurrent.Executors;
 public class HttpProcessor implements ResourceLoader {
 
     private final HttpClient httpClient;
-    private final RedirectHandler redirectHandler;
     private final ResponseHandler chainStart;
     private final ExecutorService executor;
 
@@ -20,9 +19,8 @@ public class HttpProcessor implements ResourceLoader {
     public HttpProcessor() {
         this.httpClient = new HttpClient();
 
-        this.redirectHandler = new RedirectHandler(httpClient);
+        RedirectHandler redirectHandler = new RedirectHandler(httpClient);
         ResponseHandler errorHandler = new ErrorHandler();
-
         redirectHandler.setNextHandler(errorHandler);
 
         this.chainStart = redirectHandler;
