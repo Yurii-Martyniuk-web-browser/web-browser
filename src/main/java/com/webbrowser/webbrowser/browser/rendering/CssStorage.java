@@ -39,7 +39,6 @@ public class CssStorage {
         tagStyles.put("input", "border: 1px solid #aaa; padding: 3px; background-color: white;");
         tagStyles.put("button", "padding: 5px 10px; border: 1px solid #ccc; border-radius: 3px; cursor: pointer; background-color: #f0f0f0;");
         tagStyles.put("label", "display: inline-block;");
-        tagStyles.put("div", "display: block; min-height: 10px; border-width: 1px; border-color: red; margin: 3px;");
         classStyles.put("highlight", "background-color: yellow; color: black; padding: 2px 4px; border-radius: 3px;");
         classStyles.put("primary", "background-color: #007bff; color: white;");
         classStyles.put("secondary", "background-color: #6c757d; color: white;");
@@ -81,15 +80,84 @@ public class CssStorage {
 
             if (properties.isEmpty()) continue;
 
+            Map<String, String> parsedStyles = new HashMap<>();
+            String[] rules = properties.split(";");
+            for (String rule : rules) {
+                if (rule.isEmpty()) continue;
+                String[] parts = rule.split(":", 2);
+                if (parts.length != 2) continue;
+
+                String key = parts[0].trim();
+                String value = parts[1].trim();
+
+                if (key.equals("border")) {
+                    parseBorder(parsedStyles, value, "");
+                } else if (key.equals("border-top") || key.equals("border-bottom")
+                        || key.equals("border-left") || key.equals("border-right")) {
+                    parseBorder(parsedStyles, value, key.substring(7)); // top, bottom, left, right
+                } else if (key.equals("padding") || key.equals("margin")) {
+                    String[] vals = value.split("\\s+");
+                    switch (vals.length) {
+                        case 1 -> parsedStyles.put(key, convertToPx(vals[0]));
+                        case 2 -> parsedStyles.put(key + "-vertical", convertToPx(vals[0]));
+                        case 3 -> parsedStyles.put(key + "-top", convertToPx(vals[0]));
+                        case 4 -> {
+                            parsedStyles.put(key + "-top", convertToPx(vals[0]));
+                            parsedStyles.put(key + "-right", convertToPx(vals[1]));
+                            parsedStyles.put(key + "-bottom", convertToPx(vals[2]));
+                            parsedStyles.put(key + "-left", convertToPx(vals[3]));
+                        }
+                    }
+                } else {
+                    parsedStyles.put(key, value);
+                }
+            }
+
             for (String selector : selectors.split(",")) {
                 selector = selector.trim();
-
                 if (selector.startsWith(".")) {
-                    classStyles.put(selector.substring(1).toLowerCase(), properties);
+                    classStyles.put(selector.substring(1).toLowerCase(), mapToCssString(parsedStyles));
                 } else if (!selector.contains("#") && !selector.contains(" ")) {
-                    tagStyles.put(selector.toLowerCase(), properties);
+                    tagStyles.put(selector.toLowerCase(), mapToCssString(parsedStyles));
                 }
             }
         }
     }
+
+    private static void parseBorder(Map<String, String> styles, String value, String side) {
+        String[] parts = value.split("\\s+");
+        String width = null, style = "solid", color = "black";
+
+        for (String part : parts) {
+            if (part.matches("\\d+px")) width = part;
+            else if (part.matches("solid|dashed|dotted|double|groove|ridge|inset|outset")) style = part;
+            else color = part;
+        }
+
+        String suffix = side.isEmpty() ? "" : "-" + side;
+
+        if (width != null) styles.put("border" + suffix + "-width", width);
+        styles.put("border" + suffix + "-style", style);
+        styles.put("border" + suffix + "-color", color);
+    }
+
+    private static String mapToCssString(Map<String, String> styles) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String, String> entry : styles.entrySet()) {
+            sb.append(entry.getKey()).append(": ").append(entry.getValue()).append("; ");
+        }
+        return sb.toString().trim();
+    }
+
+    private static String convertToPx(String val) {
+        val = val.trim().toLowerCase();
+        if (val.endsWith("px")) return val;
+        if (val.endsWith("em")) {
+            try { return (Double.parseDouble(val.replace("em", "")) * 16) + "px"; }
+            catch (NumberFormatException e) { return "0px"; }
+        }
+        try { Double.parseDouble(val); return val + "px"; }
+        catch (NumberFormatException e) { return val; }
+    }
+
 }

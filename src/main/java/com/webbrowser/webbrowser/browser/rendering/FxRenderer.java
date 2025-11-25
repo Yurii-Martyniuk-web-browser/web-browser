@@ -12,12 +12,8 @@ import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class FxRenderer {
-
-    private static final Pattern SIZE_PATTERN = Pattern.compile("(\\d+\\.?\\d*)(px|em|%)?");
 
     private static String mapCssProperty(String cssProperty) {
         return switch (cssProperty.toLowerCase()) {
@@ -25,266 +21,202 @@ public class FxRenderer {
             case "background-color" -> "-fx-background-color";
             case "font-size" -> "-fx-font-size";
             case "font-weight" -> "-fx-font-weight";
-            case "text-align" -> "-fx-alignment";
+            case "font-style" -> "-fx-font-style";
             case "text-decoration" -> "-fx-underline";
+            case "text-align" -> "-fx-text-alignment";
             case "width" -> "-fx-pref-width";
             case "height" -> "-fx-pref-height";
-            case "padding", "margin" -> "-fx-padding";
+            case "padding-top", "padding-right", "padding-bottom", "padding-left",
+                 "margin-top", "margin-right", "margin-bottom", "margin-left" -> "-fx-padding";
             case "border-color" -> "-fx-border-color";
-            case "border", "border-top", "border-width" -> "-fx-border-width";
-            case "border-radius" -> "-fx-border-radius";
+            case "border-width" -> "-fx-border-width";
+            case "border-style" -> "-fx-border-style";
             default -> null;
         };
     }
 
-    private static String processValue(String key, String value) {
-        String lowerValue = value.trim().toLowerCase();
-
-        if (key.matches("border") || key.matches("border-top")) {
-            Matcher matcher = SIZE_PATTERN.matcher(lowerValue);
-            if (matcher.find()) {
-                lowerValue = matcher.group(0);
-            } else {
-                return "0px";
-            }
-        }
-
-        if (key.matches(".*(padding|margin).*") && (lowerValue.contains(" ") || lowerValue.contains("auto"))) {
-            String[] parts = lowerValue.split("\\s+");
-            StringBuilder converted = new StringBuilder();
-
-            for (String part : parts) {
-                if (part.equals("auto")) {
-                    converted.append("0px").append(" ");
-                } else {
-                    converted.append(convertToPx(part)).append(" ");
-                }
-            }
-            return converted.toString().trim();
-        }
-
-        if (key.matches(".*(width|height|size|padding|margin|border).*")) {
-            return convertToPx(lowerValue);
-        }
-
-        return value.trim();
-    }
-
     private static String convertToPx(String sizeValue) {
         sizeValue = sizeValue.trim().toLowerCase();
-
-        if (sizeValue.endsWith("px")) {
-            return sizeValue;
-        } else if (sizeValue.endsWith("em")) {
+        if (sizeValue.endsWith("px")) return sizeValue;
+        if (sizeValue.endsWith("em")) {
             try {
-                double emValue = Double.parseDouble(sizeValue.replace("em", "").trim());
-                return (emValue * 16) + "px";
-            } catch (NumberFormatException e) {
-                return "0px";
-            }
-        } else {
-            try {
-                Double.parseDouble(sizeValue);
-                return sizeValue + "px";
-            } catch (NumberFormatException e) {
-                return "0px";
-            }
+                double emValue = Double.parseDouble(sizeValue.replace("em", "")) * 16;
+                return emValue + "px";
+            } catch (Exception e) { return "0px"; }
         }
+        try { Double.parseDouble(sizeValue); return sizeValue + "px"; }
+        catch (Exception e) { return "0px"; }
+    }
+
+    private static String processFontWeight(String value) {
+        value = value.trim().toLowerCase();
+        return switch (value) {
+            case "bold", "700" -> "bold";
+            case "normal", "400" -> "normal";
+            default -> "normal";
+        };
+    }
+
+    private static String processTextAlign(String value) {
+        value = value.trim().toLowerCase();
+        return switch (value) {
+            case "left","center","right","justify" -> value;
+            default -> "left";
+        };
+    }
+
+    private static String processBackgroundColor(String value) {
+        if (value == null || value.isEmpty()) return "transparent";
+        value = value.trim();
+        if (value.matches("#[0-9a-fA-F]{3,6}") || value.startsWith("rgb") || value.matches("[a-zA-Z]+"))
+            return value;
+        return "transparent";
     }
 
     private void applyFxStyles(Region node, Map<String, String> styles) {
-        String styleString = createStyleString(styles);
+        StringBuilder styleString = new StringBuilder();
 
-        if (!styleString.isEmpty()) {
-            node.setStyle(styleString);
+        for (Map.Entry<String, String> entry : styles.entrySet()) {
+            String key = entry.getKey().toLowerCase();
+            String value = entry.getValue();
+
+            switch (key) {
+                case "color" -> styleString.append("-fx-text-fill: ").append(value).append("; ");
+                case "background-color" -> styleString.append("-fx-background-color: ").append(value).append("; ");
+                case "font-size" -> styleString.append("-fx-font-size: ").append(convertToPx(value)).append("; ");
+                case "font-weight" -> styleString.append("-fx-font-weight: ").append(processFontWeight(value)).append("; ");
+                case "text-align" -> styleString.append("-fx-alignment: ").append(mapTextAlign(value)).append("; ");
+                case "padding", "margin" -> styleString.append("-fx-padding: ").append(convertToPx(value)).append("; ");
+                case "border-color" -> styleString.append("-fx-border-color: ").append(value).append("; ");
+                case "border-width" -> styleString.append("-fx-border-width: ").append(convertToPx(value)).append("; ");
+            }
         }
+
+        if (!styleString.isEmpty()) node.setStyle(styleString.toString());
+    }
+
+    private String mapTextAlign(String value) {
+        return switch (value.toLowerCase()) {
+            case "left" -> "TOP_LEFT";
+            case "center" -> "CENTER";
+            case "right" -> "TOP_RIGHT";
+            default -> "TOP_LEFT";
+        };
     }
 
     public Node render(RenderNode rn) {
         return switch (rn.type) {
             case BLOCK -> renderBlock(rn);
-            case INLINE -> new Label("Inline Error");
-
+            case INLINE -> renderInline(rn);
             case TEXT -> new Text(rn.text);
-
-            case IMAGE -> {
-                // === ВИПРАВЛЕННЯ РЕНДЕРИНГУ ЗОБРАЖЕННЯ ===
-                if (rn.image != null && rn.image.length > 0) {
-                    try {
-                        System.out.println("Rendering image from bytes, size: " + rn.image.length);
-
-                        // 1. Створюємо потік
-                        ByteArrayInputStream bis = new ByteArrayInputStream(rn.image);
-
-                        // 2. Створюємо Image
-                        Image img = new Image(bis);
-
-                        // 3. Перевіряємо на помилки завантаження (битий формат)
-                        if (img.isError()) {
-                            System.err.println("Image load error: " + img.getException());
-                            yield new Label("[Img Format Error]");
-                        }
-
-                        // 4. Створюємо ImageView
-                        ImageView iv = new ImageView(img);
-
-                        // 5. Налаштування розмірів (критично важливо!)
-                        // Якщо в CSS задано width/height - беремо їх. Якщо ні - беремо розмір картинки.
-                        // Але часто зручно обмежити максимальну ширину, щоб не порвало верстку.
-                        iv.setPreserveRatio(true);
-
-                        // Перевіряємо стилі
-                        if (rn.style.containsKey("width")) {
-                            // Тут треба парсити пікселі, спрощено:
-                            // iv.setFitWidth(...);
-                        } else {
-                            // Дефолтне обмеження, якщо немає стилів
-                            if (img.getWidth() > 800) {
-                                iv.setFitWidth(800);
-                            }
-                        }
-
-                        yield iv;
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        yield new Label("[Img Exception]");
-                    }
-                } else {
-                    System.out.println("Image bytes are null or empty for src: " + rn.src);
-                    yield new Label("[Img Missing]");
-                }
-            }
-
+            case IMAGE -> renderImage(rn);
             case TABLE -> renderTable(rn);
             case ROW -> renderRow(rn);
             case CELL -> renderCell(rn);
         };
     }
 
-    private static String createStyleString(Map<String, String> styles) {
-        StringBuilder styleString = new StringBuilder();
-        for (Map.Entry<String, String> entry : styles.entrySet()) {
-            String cssProp = entry.getKey();
-            String value = entry.getValue();
-
-            String fxProp = mapCssProperty(cssProp);
-
-            if (fxProp != null) {
-                String processedValue = processValue(cssProp, value);
-
-                if (fxProp.equals("-fx-text-fill")) {
-                    fxProp = "-fx-fill";
-                }
-
-                styleString.append(fxProp)
-                        .append(": ")
-                        .append(processedValue)
-                        .append("; ");
-            }
-        }
-        return styleString.toString();
-    }
-
-
     private Node renderBlock(RenderNode rn) {
         VBox box = new VBox();
-        String blockStyle = createStyleString(rn.style);
-        box.setStyle(blockStyle);
+        applyFxStyles(box, rn.style);
 
         List<Node> inlineBuffer = new ArrayList<>();
-
         for (RenderNode child : rn.children) {
             if (child.type == RenderNode.Type.BLOCK || child.type == RenderNode.Type.TABLE) {
                 if (!inlineBuffer.isEmpty()) {
-                    TextFlow flow = new TextFlow(inlineBuffer.toArray(new Node[0]));
-                    box.getChildren().add(flow);
+                    box.getChildren().add(new TextFlow(inlineBuffer.toArray(new Node[0])));
                     inlineBuffer.clear();
                 }
-
                 box.getChildren().add(render(child));
             } else {
                 inlineBuffer.addAll(renderInlineNode(child, rn.style));
             }
         }
-
-        if (!inlineBuffer.isEmpty()) {
-            TextFlow flow = new TextFlow(inlineBuffer.toArray(new Node[0]));
-            box.getChildren().add(flow);
-        }
-
+        if (!inlineBuffer.isEmpty())
+            box.getChildren().add(new TextFlow(inlineBuffer.toArray(new Node[0])));
         return box;
     }
 
-
-    private Node renderInline(RenderNode rn) {
-        TextFlow tf = new TextFlow();
-        for (RenderNode c : rn.children) {
-            Node child = render(c);
-            if (child instanceof Text) {
-            }
-            tf.getChildren().add(child);
-        }
-        return tf;
-    }
-
-    private List<Node> renderInlineNode(RenderNode rn, Map<String, String> parentStyles) {
+    private List<Node> renderInlineNode(RenderNode rn, Map<String,String> parentStyles) {
         List<Node> nodes = new ArrayList<>();
-
         if (rn.type == RenderNode.Type.TEXT) {
             Text t = new Text(rn.text);
             t.setStyle(createStyleString(parentStyles) + createStyleString(rn.style));
             nodes.add(t);
-        }
-        else if (rn.type == RenderNode.Type.IMAGE) {
-            nodes.add((Node) render(rn));
-        }
+        } else if (rn.type == RenderNode.Type.IMAGE) nodes.add(renderImage(rn));
         else if (rn.type == RenderNode.Type.INLINE) {
             String href = rn.style.get("href");
             boolean isLink = href != null;
-
-            for (RenderNode child : rn.children) {
-                List<Node> childFxNodes = renderInlineNode(child, rn.style);
-
-                for (Node node : childFxNodes) {
-                    if (node instanceof Text) {
-                        Text t = (Text) node;
-                        String currentStyle = t.getStyle();
-                        String newStyle = createStyleString(rn.style);
-                        t.setStyle(currentStyle + newStyle);
-
-                        if (isLink) {
-                            t.setOnMouseClicked(e -> System.out.println("Navigating to: " + href));
-                            t.setUnderline(true);
-                        }
+            for (RenderNode c : rn.children) {
+                List<Node> children = renderInlineNode(c, rn.style);
+                for (Node n : children) {
+                    if (isLink && n instanceof Text t) {
+                        t.setUnderline(true);
+                        t.setOnMouseClicked(e -> System.out.println("Navigate to: " + href));
                     }
-                    nodes.add(node);
+                    nodes.add(n);
                 }
             }
         }
-
         return nodes;
     }
 
+    private Node renderInline(RenderNode rn) {
+        TextFlow tf = new TextFlow();
+        for (RenderNode c : rn.children) tf.getChildren().addAll(renderInlineNode(c, rn.style));
+        return tf;
+    }
 
-    private Node renderTable(RenderNode rn) {
-        GridPane gp = new GridPane();
-        applyFxStyles(gp, rn.style);
-        int r = 0;
-        for (RenderNode row : rn.children) {
-            int c = 0;
-            for (RenderNode cell : row.children) {
-                Node cellNode = render(cell);
-                if (cellNode instanceof Region) {
-                    applyFxStyles((Region) cellNode, row.children.get(c).style);
-                }
-                gp.add(cellNode, c, r);
-                c++;
+    private Node renderImage(RenderNode rn) {
+        if (rn.image == null || rn.image.length == 0) return new Label("[Img Missing]");
+        try {
+            Image img = new Image(new ByteArrayInputStream(rn.image));
+            ImageView iv = new ImageView(img);
+            iv.setPreserveRatio(true);
+            if (rn.style.containsKey("width")) {
+                String val = rn.style.get("width").replace("px","");
+                iv.setFitWidth(Double.parseDouble(val));
             }
-            r++;
+            return iv;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new Label("[Img Error]");
         }
+    }
+
+    private Node renderTable(RenderNode tableNode) {
+        GridPane gp = new GridPane();
+        applyFxStyles(gp, tableNode.style); // стилі для table
+
+        int rowIndex = 0;
+        for (RenderNode row : tableNode.children) {
+            if (row.type != RenderNode.Type.ROW) continue;
+
+            int colIndex = 0;
+            for (RenderNode cell : row.children) {
+                if (cell.type != RenderNode.Type.CELL) continue;
+
+                VBox cellBox = new VBox();
+                applyFxStyles(cellBox, cell.style); // стилі для td/th
+
+                for (RenderNode c : cell.children) {
+                    Node child = render(c);
+                    if (child instanceof Text t) {
+                        // комбінуємо стиль батька та власний
+                        t.setStyle(createStyleString(cell.style));
+                    }
+                    cellBox.getChildren().add(child);
+                }
+
+                gp.add(cellBox, colIndex, rowIndex);
+                colIndex++;
+            }
+            rowIndex++;
+        }
+
         return gp;
     }
+
 
 
     private Node renderRow(RenderNode rn) {
@@ -294,11 +226,23 @@ public class FxRenderer {
         return hb;
     }
 
-
     private Node renderCell(RenderNode rn) {
         VBox v = new VBox();
-        applyFxStyles(v, rn.style);
-        for (RenderNode c : rn.children) v.getChildren().add(render(c));
+        applyFxStyles(v, rn.style); // padding, background-color
+        for (RenderNode c : rn.children) {
+            Node child = render(c);
+            v.getChildren().add(child);
+        }
         return v;
+    }
+
+
+    private String createStyleString(Map<String,String> styles) {
+        StringBuilder sb = new StringBuilder();
+        for (Map.Entry<String,String> e : styles.entrySet()) {
+            String fx = mapCssProperty(e.getKey());
+            if (fx != null) sb.append(fx).append(": ").append(e.getValue()).append("; ");
+        }
+        return sb.toString();
     }
 }
