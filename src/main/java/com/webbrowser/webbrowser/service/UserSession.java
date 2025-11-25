@@ -2,9 +2,14 @@ package com.webbrowser.webbrowser.service;
 
 import com.webbrowser.webbrowser.repository.ClientSessionRepository;
 
-public class UserSession {
-    private static UserSession INSTANCE;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+public class UserSession {
+
+    private static final Logger log = Logger.getLogger(UserSession.class.getName());
+
+    private static UserSession INSTANCE;
     private final ClientSessionRepository repository;
 
     private Long userId;
@@ -17,7 +22,7 @@ public class UserSession {
         if (savedSession != null) {
             this.userId = savedSession.userId();
             this.email = savedSession.email();
-            System.out.println("Відновлено сесію для: " + this.email);
+            log.log(Level.INFO, "Session restored for user: {0}", this.email);
         }
     }
 
@@ -34,21 +39,11 @@ public class UserSession {
         repository.saveSession(userId, email);
     }
 
-    public void logout() {
-        this.userId = null;
-        this.email = null;
-        repository.clearSession();
-    }
-
     public boolean isLoggedIn() {
         return userId != null;
     }
 
     public Long getUserId() {
         return userId;
-    }
-
-    public String getEmail() {
-        return email;
     }
 }

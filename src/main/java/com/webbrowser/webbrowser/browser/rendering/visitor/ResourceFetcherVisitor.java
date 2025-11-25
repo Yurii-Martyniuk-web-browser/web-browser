@@ -11,8 +11,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ResourceFetcherVisitor implements NodeVisitor {
+
+    private static final Logger logger = Logger.getLogger(ResourceFetcherVisitor.class.getName());
 
     private final ResourceLoader resourceLoader;
     private final String baseUrl;
@@ -46,36 +50,32 @@ public class ResourceFetcherVisitor implements NodeVisitor {
 
         String tagName = element.tagName().toLowerCase();
 
-        System.out.println("tagName: " + tagName);
-        System.out.println("attr: " + element.attr("rel"));
-        System.out.println("Attributes: " + element.attributes());
-
         if (tagName.equals("link") && "stylesheet".equalsIgnoreCase(element.getAttribute("rel"))) {
             String href = element.getAttribute("href");
             if (!href.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, href);
-                    System.out.println("Fetching CSS: " + absoluteUrl);
+                    logger.info("Fetching CSS: " + absoluteUrl);
                     CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
 
                     pendingTasks.add(future);
 
                     future.thenAccept(bytes -> {
-                                if (bytes != null && bytes.length > 0) {
-                                    CssStorage.addGlobalStyles(new String(bytes));
-                                    System.out.println("Loaded async css: " + absoluteUrl);
-                                } else  {
-                                    System.out.println("Failed to load async css: " + absoluteUrl);
-                                }
-                            });
+                        if (bytes != null && bytes.length > 0) {
+                            String css = new String(bytes);
+                            CssStorage.addGlobalStyles(css);
+                            logger.info("Loaded async css: " + absoluteUrl);
+                        } else {
+                            logger.warning("Failed to load async css: " + absoluteUrl);
+                        }
+                    });
                 } catch (Exception e) {
-                    System.err.println("Failed to load CSS: " + href);
+                    logger.log(Level.SEVERE, "Failed to load CSS: " + href, e);
                 }
             }
         }
         else if (tagName.equals("img")) {
             String src = element.getAttribute("src");
-            System.out.println("src in fetcher: " + src);
             if (!src.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
@@ -84,55 +84,53 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                     pendingTasks.add(future);
 
                     future.thenAccept(bytes -> {
-                                if (bytes != null && bytes.length > 0) {
-                                    loadedImages.put(absoluteUrl, bytes);
-                                    element.attributes().put("src", absoluteUrl);
-                                    System.out.println("Loaded async image: " + absoluteUrl);
-                                } else  {
-                                    System.out.println("Failed to load async image: " + absoluteUrl);
-                                }
-                            });
-                } catch (Exception ignored) {}
+                        if (bytes != null && bytes.length > 0) {
+                            loadedImages.put(absoluteUrl, bytes);
+                            element.attributes().put("src", absoluteUrl);
+                            logger.info("Loaded async image: " + absoluteUrl);
+                        } else  {
+                            logger.warning("Failed to load async image: " + absoluteUrl);
+                        }
+                    });
+                } catch (Exception ignored) {
+                }
             }
         }
         else if (tagName.equals("script")) {
             String src = element.getAttribute("src");
-            System.out.println("Fetching script: " + src);
 
             if (src != null && !src.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
-                    System.out.println("Fetching JS: " + absoluteUrl);
+                    logger.info("Fetching JS: " + absoluteUrl);
                     CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
 
                     pendingTasks.add(future);
 
                     future.thenAccept(bytes -> {
-                                if (bytes != null && bytes.length > 0) {
-                                    loadedScripts.put(absoluteUrl, new String(bytes));
-                                    element.attributes().put("src", absoluteUrl);
-                                    System.out.println("Loaded async script: " + absoluteUrl);
-                                } else  {
-                                    System.out.println("Failed to load async script: " + absoluteUrl);
-                                }
-                            });
+                        if (bytes != null && bytes.length > 0) {
+                            loadedScripts.put(absoluteUrl, new String(bytes));
+                            element.attributes().put("src", absoluteUrl);
+                            logger.info("Loaded async script: " + absoluteUrl);
+                        }
+                    });
                 } catch (Exception e) {
-                    System.err.println("Failed to load JS: " + src);
+                    logger.log(Level.SEVERE, "Failed to load JS: " + src, e);
                 }
             } else {
                 String inlineCode = element.text();
-
-                System.out.println("--- Processing Inline Script ---");
-                System.out.println("Raw text inside script tag: '" + inlineCode + "'");
 
                 if (!inlineCode.isEmpty()) {
                     String type = element.getAttribute("type");
                     if (type == null || type.isEmpty() || type.equals("text/javascript") || type.equals("application/javascript")) {
                         loadedScripts.put("Inline Script #" + (++inlineScriptCounter), inlineCode);
-                    } else {
-                        System.out.println("Skipping script with type: " + type);
                     }
                 }
+            }
+        } else if (tagName.equals("style")) {
+            String cssContent = element.text();
+            if (cssContent != null && !cssContent.isBlank()) {
+                CssStorage.addGlobalStyles(cssContent);
             }
         }
     }

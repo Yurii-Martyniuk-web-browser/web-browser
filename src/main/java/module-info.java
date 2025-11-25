@@ -8,6 +8,7 @@ module com.webbrowser.webbrowser {
     requires com.google.gson;
     requires java.net.http;
     requires java.sql;
+    requires org.xerial.sqlitejdbc;
 
 
     opens com.webbrowser.webbrowser to javafx.fxml;

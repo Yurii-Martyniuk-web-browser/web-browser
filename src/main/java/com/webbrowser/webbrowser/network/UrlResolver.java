@@ -1,9 +1,13 @@
 package com.webbrowser.webbrowser.network;
 
+
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.logging.Logger;
 
 public class UrlResolver {
+
+    private static final Logger log = Logger.getLogger(UrlResolver.class.getName());
 
     public static String resolve(String baseUrl, String relativeUrl) {
         if (relativeUrl == null || relativeUrl.isEmpty()) return "";
@@ -17,8 +21,8 @@ public class UrlResolver {
             URI base = new URI(baseUrl);
             return base.resolve(relativeUrl).toString();
         } catch (URISyntaxException | IllegalArgumentException e) {
-            System.err.println("URL Resolve Error: " + e.getMessage());
-            return relativeUrl; // Повертаємо як є, якщо не вийшло
+            log.info("sdsd");
+            return relativeUrl;
         }
     }
 }

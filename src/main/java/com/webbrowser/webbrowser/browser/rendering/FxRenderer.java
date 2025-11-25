@@ -15,15 +15,27 @@ import java.util.Map;
 
 public class FxRenderer {
 
-    private static String mapCssProperty(String cssProperty) {
+    public Node render(RenderNode rn) {
+        return switch (rn.type) {
+            case BLOCK -> renderBlock(rn);
+            case INLINE -> renderInline(rn);
+            case TEXT -> new Text(rn.text);
+            case IMAGE -> renderImage(rn);
+            case TABLE -> renderTable(rn);
+            case ROW -> renderRow(rn);
+            case CELL -> renderCell(rn);
+        };
+    }
+
+    private static String mapCssProperty(String cssProperty, String value) {
         return switch (cssProperty.toLowerCase()) {
             case "color" -> "-fx-text-fill";
-            case "background-color" -> "-fx-background-color";
+            case "background-color" -> "-fx-background-color: " + processBackgroundColor(value) + ";";
             case "font-size" -> "-fx-font-size";
-            case "font-weight" -> "-fx-font-weight";
+            case "font-weight" -> "-fx-font-weight: " + processFontWeight(value) + ";";
             case "font-style" -> "-fx-font-style";
             case "text-decoration" -> "-fx-underline";
-            case "text-align" -> "-fx-text-alignment";
+            case "text-align" -> "-fx-text-alignment: " + processTextAlign(value) + ";";
             case "width" -> "-fx-pref-width";
             case "height" -> "-fx-pref-height";
             case "padding-top", "padding-right", "padding-bottom", "padding-left",
@@ -52,7 +64,6 @@ public class FxRenderer {
         value = value.trim().toLowerCase();
         return switch (value) {
             case "bold", "700" -> "bold";
-            case "normal", "400" -> "normal";
             default -> "normal";
         };
     }
@@ -84,9 +95,9 @@ public class FxRenderer {
                 case "color" -> styleString.append("-fx-text-fill: ").append(value).append("; ");
                 case "background-color" -> styleString.append("-fx-background-color: ").append(value).append("; ");
                 case "font-size" -> styleString.append("-fx-font-size: ").append(convertToPx(value)).append("; ");
-                case "font-weight" -> styleString.append("-fx-font-weight: ").append(processFontWeight(value)).append("; ");
+                case "font-weight" -> styleString.append("-fx-font-weight: ").append(value).append("; ");
                 case "text-align" -> styleString.append("-fx-alignment: ").append(mapTextAlign(value)).append("; ");
-                case "padding", "margin" -> styleString.append("-fx-padding: ").append(convertToPx(value)).append("; ");
+                case "padding" -> styleString.append("-fx-padding: ").append(convertToPx(value)).append("; ");
                 case "border-color" -> styleString.append("-fx-border-color: ").append(value).append("; ");
                 case "border-width" -> styleString.append("-fx-border-width: ").append(convertToPx(value)).append("; ");
             }
@@ -95,24 +106,12 @@ public class FxRenderer {
         if (!styleString.isEmpty()) node.setStyle(styleString.toString());
     }
 
+
     private String mapTextAlign(String value) {
         return switch (value.toLowerCase()) {
-            case "left" -> "TOP_LEFT";
             case "center" -> "CENTER";
             case "right" -> "TOP_RIGHT";
             default -> "TOP_LEFT";
-        };
-    }
-
-    public Node render(RenderNode rn) {
-        return switch (rn.type) {
-            case BLOCK -> renderBlock(rn);
-            case INLINE -> renderInline(rn);
-            case TEXT -> new Text(rn.text);
-            case IMAGE -> renderImage(rn);
-            case TABLE -> renderTable(rn);
-            case ROW -> renderRow(rn);
-            case CELL -> renderCell(rn);
         };
     }
 
@@ -179,14 +178,13 @@ public class FxRenderer {
             }
             return iv;
         } catch (Exception e) {
-            e.printStackTrace();
             return new Label("[Img Error]");
         }
     }
 
     private Node renderTable(RenderNode tableNode) {
         GridPane gp = new GridPane();
-        applyFxStyles(gp, tableNode.style); // стилі для table
+        applyFxStyles(gp, tableNode.style);
 
         int rowIndex = 0;
         for (RenderNode row : tableNode.children) {
@@ -197,12 +195,11 @@ public class FxRenderer {
                 if (cell.type != RenderNode.Type.CELL) continue;
 
                 VBox cellBox = new VBox();
-                applyFxStyles(cellBox, cell.style); // стилі для td/th
+                applyFxStyles(cellBox, cell.style);
 
                 for (RenderNode c : cell.children) {
                     Node child = render(c);
                     if (child instanceof Text t) {
-                        // комбінуємо стиль батька та власний
                         t.setStyle(createStyleString(cell.style));
                     }
                     cellBox.getChildren().add(child);
@@ -227,20 +224,21 @@ public class FxRenderer {
     }
 
     private Node renderCell(RenderNode rn) {
-        VBox v = new VBox();
-        applyFxStyles(v, rn.style); // padding, background-color
-        for (RenderNode c : rn.children) {
-            Node child = render(c);
-            v.getChildren().add(child);
-        }
-        return v;
-    }
+        VBox cellBox = new VBox();
+        applyFxStyles(cellBox, rn.style);
 
+        for (RenderNode child : rn.children) {
+            Node fxChild = render(child);
+            if (fxChild instanceof Text t) t.setStyle(createStyleString(rn.style));
+            cellBox.getChildren().add(fxChild);
+        }
+        return cellBox;
+    }
 
     private String createStyleString(Map<String,String> styles) {
         StringBuilder sb = new StringBuilder();
         for (Map.Entry<String,String> e : styles.entrySet()) {
-            String fx = mapCssProperty(e.getKey());
+            String fx = mapCssProperty(e.getKey(), e.getValue());
             if (fx != null) sb.append(fx).append(": ").append(e.getValue()).append("; ");
         }
         return sb.toString();

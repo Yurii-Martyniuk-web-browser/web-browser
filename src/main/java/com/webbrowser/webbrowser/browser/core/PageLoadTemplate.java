@@ -3,12 +3,15 @@ package com.webbrowser.webbrowser.browser.core;
 import com.webbrowser.webbrowser.browser.rendering.dom.Document;
 import com.webbrowser.webbrowser.network.HttpResponse;
 
+import java.util.logging.Logger;
+
 
 public abstract class PageLoadTemplate {
 
+    private static final Logger log = Logger.getLogger(PageLoadTemplate.class.getName());
 
     public final void loadAndRender(String url) {
-        System.out.println("Starting page load for: " + url);
+        log.info("Loading " + url);
 
         HttpResponse response = fetchHttpResponse(url);
 
@@ -25,7 +28,7 @@ public abstract class PageLoadTemplate {
 
         buildFxNodes(domDocument);
 
-        System.out.println("Page rendering finished.");
+        log.info("Done loading " + url);
     }
 
     protected abstract HttpResponse fetchHttpResponse(String url);

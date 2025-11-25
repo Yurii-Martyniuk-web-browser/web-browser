@@ -60,9 +60,6 @@ public class HistoryView {
                 table.getItems().setAll(list)
         ));
 
-        List<?> data = apiClient.getHistory().join();
-        System.out.println(data);
-
         VBox root = new VBox(10, table, viewSnapshotBtn);
         stage.setScene(new Scene(root, 700, 500));
         stage.show();

@@ -5,18 +5,17 @@ import com.webbrowser.webbrowser.network.HttpRequest;
 import com.webbrowser.webbrowser.network.HttpResponse;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class RedirectHandler extends AbstractResponseHandler {
+
+    private static final Logger log = Logger.getLogger(RedirectHandler.class.getName());
     private final HttpClient httpClient;
     private int redirectCount = 0;
     private static final int MAX_REDIRECTS = 5;
 
     public RedirectHandler(HttpClient client) {
         this.httpClient = client;
-    }
-
-    public void resetRedirectCount() {
-        this.redirectCount = 0;
     }
 
     @Override
@@ -30,7 +29,7 @@ public class RedirectHandler extends AbstractResponseHandler {
             String newLocation = response.getHeader("Location");
 
             if (newLocation != null) {
-                System.out.println("Redirecting to: " + newLocation);
+                log.info("Redirecting to: " + newLocation);
                 redirectCount++;
                 try {
                     HttpRequest newRequest = HttpRequest.createGet(newLocation);
@@ -38,11 +37,11 @@ public class RedirectHandler extends AbstractResponseHandler {
 
                     return handle(newResponse);
                 } catch (IOException | IllegalArgumentException e) {
-                    System.err.println("Redirect failed due to I/O or invalid URL: " + e.getMessage());
+                    log.warning("Redirect failed due to I/O or invalid URL: " + e.getMessage());
                     return HttpResponse.internalError("Error during redirect processing to " + newLocation + ": " + e.getMessage());
                 }
             } else {
-                System.err.println("Redirect response received without Location header.");
+                log.warning("Redirect response received without Location header.");
                 return HttpResponse.internalError("Server sent a redirect code without a Location header.");
             }
         }

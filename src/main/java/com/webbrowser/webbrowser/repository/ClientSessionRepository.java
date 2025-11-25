@@ -76,16 +76,5 @@ public class ClientSessionRepository {
         return null;
     }
 
-    public void clearSession() {
-        try (Connection conn = DriverManager.getConnection(DB_URL);
-             Statement stmt = conn.createStatement()) {
-
-            stmt.execute(SQL_DELETE);
-
-        } catch (SQLException e) {
-            log.warning("Error in clearing session: " + e.getMessage());
-        }
-    }
-
     public record SessionData(Long userId, String email) {}
 }

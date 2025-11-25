@@ -8,11 +8,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.charset.UnsupportedCharsetException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class HttpClient {
 
+    private static final Logger log = Logger.getLogger(HttpClient.class.getName());
     private final Pattern CHARSET_PATTERN = Pattern.compile("charset=([\\w\\-]+)", Pattern.CASE_INSENSITIVE);
 
     public HttpResponse sendRequest(HttpRequest request) throws IOException {
@@ -22,7 +25,6 @@ public class HttpClient {
             if (request.isSecure()) {
                 SSLSocketFactory factory = (SSLSocketFactory) SSLSocketFactory.getDefault();
                 socket = factory.createSocket(request.getHost(), request.getPort());
-                System.out.println("Established secure connection to " + request.getHost());
             } else {
                 socket = new Socket(request.getHost(), request.getPort());
             }
@@ -36,7 +38,7 @@ public class HttpClient {
             return parseResponse(input);
 
         } catch (IOException e) {
-            System.err.println("Network error: Could not connect to " + request.getHost() + " over port " + request.getPort() + ". Error: " + e.getMessage());
+            log.log(Level.WARNING, "Error while sending request", e);
             String protocol = request.isSecure() ? "HTTPS" : "HTTP";
             return HttpResponse.serviceUnavailable("Connection via " + protocol + " to " + request.getHost() + " failed.");
         } finally {
@@ -44,7 +46,7 @@ public class HttpClient {
                 try {
                     socket.close();
                 } catch (IOException e) {
-
+                    log.log(Level.WARNING, "Error while closing socket", e);
                 }
             }
         }
@@ -119,7 +121,7 @@ public class HttpClient {
                 try {
                     return Charset.forName(charsetName);
                 } catch (UnsupportedCharsetException e) {
-                    System.err.println("Unsupported charset found: " + charsetName);
+                    log.log(Level.WARNING, "Unsupported charset: " + charsetName);
                 }
             }
         }

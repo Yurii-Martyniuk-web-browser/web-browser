@@ -8,8 +8,12 @@ import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class HttpProcessor implements ResourceLoader {
+
+    private static final Logger log = Logger.getLogger(HttpProcessor.class.getName());
 
     private final HttpClient httpClient;
     private final ResponseHandler chainStart;
@@ -37,11 +41,11 @@ public class HttpProcessor implements ResourceLoader {
             return chainStart.handle(initialResponse);
 
         } catch (IllegalArgumentException e) {
-            System.err.println("Invalid URL provided: " + url + " - " + e.getMessage());
+            log.log(Level.SEVERE, "Invalid URL provided: " + url + " - " + e.getMessage(), e);
             return HttpResponse.badRequest("The provided URL format is invalid.");
 
         } catch (IOException e) {
-            System.err.println("Unexpected fatal load error: " + e.getMessage());
+            log.log(Level.SEVERE, "Unexpected fatal load error: " + e.getMessage(), e);
             return HttpResponse.internalError("An unexpected system error occurred during page loading.");
         }
     }
@@ -55,14 +59,14 @@ public class HttpProcessor implements ResourceLoader {
             if (response.isSuccessful()) {
                 return response.getBodyBytes();
             } else {
-                System.err.println("Failed to load resource " + url + ". Status: " + response.getStatusCode());
+                log.severe("Failed to load resource " + url + ". Status: " + response.getStatusCode());
                 return new byte[0];
             }
         } catch (IllegalArgumentException e) {
-            System.err.println("Invalid URL for resource: " + url);
+            log.log(Level.SEVERE, "Invalid URL for resource: " + url, e);
             return new byte[0];
         } catch (java.io.IOException e) {
-            System.err.println("Error loading resource " + url + ": " + e.getMessage());
+            log.log(Level.SEVERE, "Error loading resource " + url + ": " + e.getMessage(), e);
             return new byte[0];
         }
     }

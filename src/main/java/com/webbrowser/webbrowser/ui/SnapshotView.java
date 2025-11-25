@@ -1,6 +1,5 @@
 package com.webbrowser.webbrowser.ui;
 
-import com.webbrowser.webbrowser.dto.SnapshotResponse;
 import com.webbrowser.webbrowser.service.RestApiClient;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -23,9 +22,6 @@ public class SnapshotView {
         stage.setTitle("Snapshot Viewer (ID: " + historyId + ")");
 
         TabPane tabPane = new TabPane();
-
-        SnapshotResponse snapshotSout = apiClient.getSnapshot(historyId).join();
-        System.out.println(snapshotSout);
 
         apiClient.getSnapshot(historyId).thenAccept(snapshot -> Platform.runLater(() -> {
             if (snapshot == null) {

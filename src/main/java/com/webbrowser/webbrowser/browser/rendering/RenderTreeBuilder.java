@@ -43,7 +43,6 @@ public class RenderTreeBuilder {
 
             case "img" -> {
                 rn.type = RenderNode.Type.IMAGE;
-                System.out.println("Src in treebuilder:" + el.getAttribute("src"));
                 rn.src = el.getAttribute("src");
                 rn.image = images.get(rn.src);
             }
