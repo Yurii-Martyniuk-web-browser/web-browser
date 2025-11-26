@@ -30,6 +30,8 @@ public class BrowserTabContent {
         scrollPane.setFitToWidth(true);
         scrollPane.setFitToHeight(true);
 
+        scrollPane.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
         addressBar = new TextField("https://en.wikipedia.org/wiki/Java_(programming_language)");
         Button goButton = new Button("Go");
         Button viewJsButton = new Button("View JS Code"); // Нова вимога
@@ -70,8 +72,6 @@ public class BrowserTabContent {
             url = "https://" + url;
             addressBar.setText(url);
         }
-
-        pageLoader.clearScripts();
 
         final String finalUrl = url;
         restApiClient.saveVisitAsync(finalUrl, "");

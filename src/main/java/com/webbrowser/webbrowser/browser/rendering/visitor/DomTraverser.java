@@ -1,8 +1,7 @@
-package com.webbrowser.webbrowser.browser.rendering;
+package com.webbrowser.webbrowser.browser.rendering.visitor;
 
 import com.webbrowser.webbrowser.browser.rendering.dom.Element;
 import com.webbrowser.webbrowser.browser.rendering.dom.Node;
-import com.webbrowser.webbrowser.browser.rendering.visitor.NodeVisitor;
 
 public class DomTraverser {
 

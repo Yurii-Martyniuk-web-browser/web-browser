@@ -1,6 +1,6 @@
 package com.webbrowser.webbrowser.browser.rendering.visitor;
 
-import com.webbrowser.webbrowser.browser.rendering.CssStorage;
+import com.webbrowser.webbrowser.browser.rendering.PageContext; // Ваш новий клас контексту
 import com.webbrowser.webbrowser.browser.rendering.dom.Element;
 import com.webbrowser.webbrowser.browser.rendering.dom.Node;
 import com.webbrowser.webbrowser.network.ResourceLoader;
@@ -20,26 +20,28 @@ public class ResourceFetcherVisitor implements NodeVisitor {
 
     private final ResourceLoader resourceLoader;
     private final String baseUrl;
-    private final Map<String, String> loadedScripts = new HashMap<>();
-    private final Map<String, byte[]> loadedImages = new HashMap<>();
-    private int inlineScriptCounter = 0;
+    private final PageContext pageContext;
 
+    private final Map<String, String> loadedScripts = new HashMap<>();
+
+    private int inlineScriptCounter = 0;
     private final List<CompletableFuture<?>> pendingTasks = new ArrayList<>();
 
-    public ResourceFetcherVisitor(ResourceLoader resourceLoader, String baseUrl) {
+    public ResourceFetcherVisitor(ResourceLoader resourceLoader, String baseUrl, PageContext pageContext) {
         this.resourceLoader = resourceLoader;
         this.baseUrl = baseUrl;
+        this.pageContext = pageContext;
     }
 
     public Map<String, String> getLoadedScripts() {
         return loadedScripts;
     }
 
-    public Map<String, byte[]> getLoadedImages() {
-        CompletableFuture.allOf(pendingTasks.toArray(new CompletableFuture<?>[0]))
-                .join();
-
-        return loadedImages;
+    public void awaitCompletion() {
+        if (!pendingTasks.isEmpty()) {
+            CompletableFuture.allOf(pendingTasks.toArray(new CompletableFuture<?>[0]))
+                    .join();
+        }
     }
 
     @Override
@@ -56,14 +58,16 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, href);
                     logger.info("Fetching CSS: " + absoluteUrl);
-                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
 
+                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
                     pendingTasks.add(future);
 
                     future.thenAccept(bytes -> {
                         if (bytes != null && bytes.length > 0) {
                             String css = new String(bytes);
-                            CssStorage.addGlobalStyles(css);
+                            synchronized (pageContext) {
+                                pageContext.addCssRules(css);
+                            }
                             logger.info("Loaded async css: " + absoluteUrl);
                         } else {
                             logger.warning("Failed to load async css: " + absoluteUrl);
@@ -79,16 +83,18 @@ public class ResourceFetcherVisitor implements NodeVisitor {
             if (!src.isEmpty()) {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
-                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
 
+                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
                     pendingTasks.add(future);
 
                     future.thenAccept(bytes -> {
                         if (bytes != null && bytes.length > 0) {
-                            loadedImages.put(absoluteUrl, bytes);
+                            synchronized (pageContext) {
+                                pageContext.addImage(absoluteUrl, bytes);
+                            }
                             element.attributes().put("src", absoluteUrl);
                             logger.info("Loaded async image: " + absoluteUrl);
-                        } else  {
+                        } else {
                             logger.warning("Failed to load async image: " + absoluteUrl);
                         }
                     });
@@ -103,13 +109,15 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                 try {
                     String absoluteUrl = UrlResolver.resolve(baseUrl, src);
                     logger.info("Fetching JS: " + absoluteUrl);
-                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
 
+                    CompletableFuture<byte[]> future = resourceLoader.loadResourceAsync(absoluteUrl);
                     pendingTasks.add(future);
 
                     future.thenAccept(bytes -> {
                         if (bytes != null && bytes.length > 0) {
-                            loadedScripts.put(absoluteUrl, new String(bytes));
+                            synchronized (loadedScripts) {
+                                loadedScripts.put(absoluteUrl, new String(bytes));
+                            }
                             element.attributes().put("src", absoluteUrl);
                             logger.info("Loaded async script: " + absoluteUrl);
                         }
@@ -119,7 +127,6 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                 }
             } else {
                 String inlineCode = element.text();
-
                 if (!inlineCode.isEmpty()) {
                     String type = element.getAttribute("type");
                     if (type == null || type.isEmpty() || type.equals("text/javascript") || type.equals("application/javascript")) {
@@ -127,10 +134,11 @@ public class ResourceFetcherVisitor implements NodeVisitor {
                     }
                 }
             }
-        } else if (tagName.equals("style")) {
+        }
+        else if (tagName.equals("style")) {
             String cssContent = element.text();
             if (cssContent != null && !cssContent.isBlank()) {
-                CssStorage.addGlobalStyles(cssContent);
+                pageContext.addCssRules(cssContent);
             }
         }
     }

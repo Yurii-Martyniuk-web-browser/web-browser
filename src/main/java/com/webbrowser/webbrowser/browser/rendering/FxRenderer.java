@@ -1,10 +1,14 @@
 package com.webbrowser.webbrowser.browser.rendering;
 
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 
@@ -15,233 +19,192 @@ import java.util.Map;
 
 public class FxRenderer {
 
-    // метод, який використовується в зовнішньому класі користувача та всередині цього класу
+    private interface LayoutStrategy {
+        Node createNode(RenderNode rn, FxRenderer renderer);
+    }
+
+    private final LayoutStrategy blockStrategy = new BlockLayoutStrategy();
+    private final LayoutStrategy inlineStrategy = new InlineLayoutStrategy();
+    private final LayoutStrategy imageStrategy = new ImageLayoutStrategy();
+
     public Node render(RenderNode rn) {
+        if (rn == null) return new Region();
+
         return switch (rn.type) {
-            case BLOCK -> renderBlock(rn);
-            case INLINE -> renderInline(rn);
-            case TEXT -> new Text(rn.text);
-            case IMAGE -> renderImage(rn);
-            case TABLE -> renderTable(rn);
-            case ROW -> renderRow(rn);
-            case CELL -> renderCell(rn);
+            case BLOCK -> blockStrategy.createNode(rn, this);
+            case INLINE, TEXT -> inlineStrategy.createNode(rn, this);
+            case IMAGE -> imageStrategy.createNode(rn, this);
+            default -> new Label("Unsupported Type");
         };
     }
 
-    private static String mapCssProperty(String cssProperty, String value) {
-        return switch (cssProperty.toLowerCase()) {
-            case "color" -> "-fx-text-fill";
-            case "background-color" -> "-fx-background-color: " + processBackgroundColor(value) + ";";
-            case "font-size" -> "-fx-font-size";
-            case "font-weight" -> "-fx-font-weight: " + processFontWeight(value) + ";";
-            case "font-style" -> "-fx-font-style";
-            case "text-decoration" -> "-fx-underline";
-            case "text-align" -> "-fx-text-alignment: " + processTextAlign(value) + ";";
-            case "width" -> "-fx-pref-width";
-            case "height" -> "-fx-pref-height";
-            case "padding-top", "padding-right", "padding-bottom", "padding-left",
-                 "margin-top", "margin-right", "margin-bottom", "margin-left" -> "-fx-padding";
-            case "border-color" -> "-fx-border-color";
-            case "border-width" -> "-fx-border-width";
-            case "border-style" -> "-fx-border-style";
-            default -> null;
-        };
+    private static class BlockLayoutStrategy implements LayoutStrategy {
+        @Override
+        public Node createNode(RenderNode rn, FxRenderer renderer) {
+            VBox box = new VBox();
+            applyBoxModelStyles(box, rn.style);
+
+            box.setMaxWidth(Double.MAX_VALUE);
+            box.setFillWidth(true);
+
+            if (rn.style.containsKey("min-height")) {
+                box.setMinHeight(Double.parseDouble(rn.style.get("min-height").replace("px", "")));
+            }
+
+            List<Node> currentInlineBatch = new ArrayList<>();
+
+            for (RenderNode child : rn.children) {
+                if (child.type == RenderNode.Type.BLOCK || child.type == RenderNode.Type.TABLE) {
+                    if (!currentInlineBatch.isEmpty()) {
+                        addTextFlowToBox(box, currentInlineBatch, rn.style.get("text-align"));
+                        currentInlineBatch.clear();
+                    }
+                    box.getChildren().add(renderer.render(child));
+                } else {
+                    Node inlineNode = renderer.render(child);
+                    if (inlineNode instanceof TextFlow) {
+                        currentInlineBatch.addAll(((TextFlow) inlineNode).getChildren());
+                    } else {
+                        currentInlineBatch.add(inlineNode);
+                    }
+                }
+            }
+
+            if (!currentInlineBatch.isEmpty()) {
+                addTextFlowToBox(box, currentInlineBatch, rn.style.get("text-align"));
+            }
+
+            return box;
+        }
+
+        private void addTextFlowToBox(VBox box, List<Node> nodes, String align) {
+            TextFlow flow = new TextFlow(nodes.toArray(new Node[0]));
+
+            flow.setPrefWidth(javafx.scene.layout.Region.USE_COMPUTED_SIZE);
+            flow.setMaxWidth(Double.MAX_VALUE);
+
+            if ("center".equalsIgnoreCase(align)) flow.setTextAlignment(javafx.scene.text.TextAlignment.CENTER);
+            else if ("right".equalsIgnoreCase(align)) flow.setTextAlignment(javafx.scene.text.TextAlignment.RIGHT);
+            else if ("justify".equalsIgnoreCase(align)) flow.setTextAlignment(javafx.scene.text.TextAlignment.JUSTIFY);
+            else flow.setTextAlignment(javafx.scene.text.TextAlignment.LEFT);
+
+            flow.setPadding(new javafx.geometry.Insets(0, 2, 0, 2));
+
+            box.getChildren().add(flow);
+        }
     }
 
-    private static String convertToPx(String sizeValue) {
-        sizeValue = sizeValue.trim().toLowerCase();
-        if (sizeValue.endsWith("px")) return sizeValue;
-        if (sizeValue.endsWith("em")) {
+    private static class InlineLayoutStrategy implements LayoutStrategy {
+        @Override
+        public Node createNode(RenderNode rn, FxRenderer renderer) {
+            if (rn.type == RenderNode.Type.TEXT) {
+                Text text = new Text(rn.text);
+                applyTextStyles(text, rn.style);
+                return text;
+            }
+
+            TextFlow flow = new TextFlow();
+            for (RenderNode child : rn.children) {
+                Node childNode = renderer.render(child);
+                flow.getChildren().add(childNode);
+            }
+            return flow;
+        }
+    }
+
+    private static class ImageLayoutStrategy implements LayoutStrategy {
+        @Override
+        public Node createNode(RenderNode rn, FxRenderer renderer) {
+            if (rn.image != null) {
+                try {
+                    Image img = new Image(new ByteArrayInputStream(rn.image));
+                    ImageView iv = new ImageView(img);
+                    iv.setPreserveRatio(true);
+
+                    String width = rn.style.get("width");
+                    if (width != null) {
+                        iv.setFitWidth(parseSize(width));
+                    }
+                    return iv;
+                } catch (Exception e) { return new Label("[Img Err]"); }
+            }
+            return new Label("[Img N/A]");
+        }
+    }
+
+    private static void applyBoxModelStyles(Region region, Map<String, String> styles) {
+        String bg = styles.get("background-color");
+        if (bg != null) {
             try {
-                double emValue = Double.parseDouble(sizeValue.replace("em", "")) * 16;
-                return emValue + "px";
-            } catch (Exception e) { return "0px"; }
+                region.setBackground(new Background(new BackgroundFill(Color.web(bg), CornerRadii.EMPTY, Insets.EMPTY)));
+            } catch (Exception ignored) {}
+        } else {
+            // відладка
+            //region.setBorder(new Border(new BorderStroke(Color.LIGHTGRAY, BorderStrokeStyle.DASHED, CornerRadii.EMPTY, new BorderWidths(1))));
         }
-        try { Double.parseDouble(sizeValue); return sizeValue + "px"; }
-        catch (Exception e) { return "0px"; }
+
+        region.setMaxWidth(Double.MAX_VALUE);
+
+        double pt = parseSize(styles.getOrDefault("padding-top", styles.get("padding")));
+        double pr = parseSize(styles.getOrDefault("padding-right", styles.get("padding")));
+        double pb = parseSize(styles.getOrDefault("padding-bottom", styles.get("padding")));
+        double pl = parseSize(styles.getOrDefault("padding-left", styles.get("padding")));
+        region.setPadding(new Insets(pt, pr, pb, pl));
+
+        String borderWidth = styles.get("border-width");
+        if (borderWidth != null) {
+            double b = parseSize(borderWidth);
+            region.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(b))));
+        }
+
+        if (styles.containsKey("width")) region.setPrefWidth(parseSize(styles.get("width")));
+        if (styles.containsKey("height")) region.setPrefHeight(parseSize(styles.get("height")));
+
+
     }
 
-    private static String processFontWeight(String value) {
-        value = value.trim().toLowerCase();
-        return switch (value) {
-            case "bold", "700" -> "bold";
-            default -> "normal";
-        };
-    }
+    private static void applyTextStyles(Text text, Map<String, String> styles) {
+        String color = styles.get("color");
+        if (color != null) {
+            try { text.setFill(Color.web(color)); } catch (Exception ignored) {}
+        }
 
-    private static String processTextAlign(String value) {
-        value = value.trim().toLowerCase();
-        return switch (value) {
-            case "left","center","right","justify" -> value;
-            default -> "left";
-        };
-    }
+        double size = 16;
+        String fontSize = styles.get("font-size");
+        if (fontSize != null) {
+            size = parseSize(fontSize);
+        }
 
-    private static String processBackgroundColor(String value) {
-        if (value == null || value.isEmpty()) return "transparent";
-        value = value.trim();
-        if (value.matches("#[0-9a-fA-F]{3,6}") || value.startsWith("rgb") || value.matches("[a-zA-Z]+"))
-            return value;
-        return "transparent";
-    }
-
-    private void applyFxStyles(Region node, Map<String, String> styles) {
-        StringBuilder styleString = new StringBuilder();
-
-        for (Map.Entry<String, String> entry : styles.entrySet()) {
-            String key = entry.getKey().toLowerCase();
-            String value = entry.getValue();
-
-            switch (key) {
-                case "color" -> styleString.append("-fx-text-fill: ").append(value).append("; ");
-                case "background-color" -> styleString.append("-fx-background-color: ").append(value).append("; ");
-                case "font-size" -> styleString.append("-fx-font-size: ").append(convertToPx(value)).append("; ");
-                case "font-weight" -> styleString.append("-fx-font-weight: ").append(value).append("; ");
-                case "text-align" -> styleString.append("-fx-alignment: ").append(mapTextAlign(value)).append("; ");
-                case "padding" -> styleString.append("-fx-padding: ").append(convertToPx(value)).append("; ");
-                case "border-color" -> styleString.append("-fx-border-color: ").append(value).append("; ");
-                case "border-width" -> styleString.append("-fx-border-width: ").append(convertToPx(value)).append("; ");
+        FontWeight weight = FontWeight.NORMAL;
+        String fontWeight = styles.get("font-weight");
+        if (fontWeight != null) {
+            fontWeight = fontWeight.toLowerCase().trim();
+            if (fontWeight.contains("bold") || fontWeight.equals("700") || fontWeight.equals("800") || fontWeight.equals("900")) {
+                weight = FontWeight.BOLD;
             }
         }
 
-        if (!styleString.isEmpty()) node.setStyle(styleString.toString());
-    }
-
-
-    private String mapTextAlign(String value) {
-        return switch (value.toLowerCase()) {
-            case "center" -> "CENTER";
-            case "right" -> "TOP_RIGHT";
-            default -> "TOP_LEFT";
-        };
-    }
-
-    private Node renderBlock(RenderNode rn) {
-        VBox box = new VBox();
-        applyFxStyles(box, rn.style);
-
-        List<Node> inlineBuffer = new ArrayList<>();
-        for (RenderNode child : rn.children) {
-            if (child.type == RenderNode.Type.BLOCK || child.type == RenderNode.Type.TABLE) {
-                if (!inlineBuffer.isEmpty()) {
-                    box.getChildren().add(new TextFlow(inlineBuffer.toArray(new Node[0])));
-                    inlineBuffer.clear();
-                }
-                box.getChildren().add(render(child));
-            } else {
-                inlineBuffer.addAll(renderInlineNode(child, rn.style));
-            }
+        javafx.scene.text.FontPosture posture = javafx.scene.text.FontPosture.REGULAR;
+        String fontStyle = styles.get("font-style");
+        if ("italic".equalsIgnoreCase(fontStyle)) {
+            posture = javafx.scene.text.FontPosture.ITALIC;
         }
-        if (!inlineBuffer.isEmpty())
-            box.getChildren().add(new TextFlow(inlineBuffer.toArray(new Node[0])));
-        return box;
-    }
 
-    private List<Node> renderInlineNode(RenderNode rn, Map<String,String> parentStyles) {
-        List<Node> nodes = new ArrayList<>();
-        if (rn.type == RenderNode.Type.TEXT) {
-            Text t = new Text(rn.text);
-            t.setStyle(createStyleString(parentStyles) + createStyleString(rn.style));
-            nodes.add(t);
-        } else if (rn.type == RenderNode.Type.IMAGE) nodes.add(renderImage(rn));
-        else if (rn.type == RenderNode.Type.INLINE) {
-            String href = rn.style.get("href");
-            boolean isLink = href != null;
-            for (RenderNode c : rn.children) {
-                List<Node> children = renderInlineNode(c, rn.style);
-                for (Node n : children) {
-                    if (isLink && n instanceof Text t) {
-                        t.setUnderline(true);
-                        t.setOnMouseClicked(e -> System.out.println("Navigate to: " + href));
-                    }
-                    nodes.add(n);
-                }
-            }
+        text.setFont(Font.font("System", weight, posture, size));
+
+        String decoration = styles.get("text-decoration");
+        if (decoration != null && decoration.contains("underline")) {
+            text.setUnderline(true);
         }
-        return nodes;
     }
 
-    private Node renderInline(RenderNode rn) {
-        TextFlow tf = new TextFlow();
-        for (RenderNode c : rn.children) tf.getChildren().addAll(renderInlineNode(c, rn.style));
-        return tf;
-    }
-
-    private Node renderImage(RenderNode rn) {
-        if (rn.image == null || rn.image.length == 0) return new Label("[Img Missing]");
+    private static double parseSize(String val) {
+        if (val == null) return 0;
+        val = val.trim().toLowerCase().replace("px", "").replace("em", ""); // dirty cleanup
         try {
-            Image img = new Image(new ByteArrayInputStream(rn.image));
-            ImageView iv = new ImageView(img);
-            iv.setPreserveRatio(true);
-            if (rn.style.containsKey("width")) {
-                String val = rn.style.get("width").replace("px","");
-                iv.setFitWidth(Double.parseDouble(val));
-            }
-            return iv;
-        } catch (Exception e) {
-            return new Label("[Img Error]");
+            return Double.parseDouble(val);
+        } catch (NumberFormatException e) {
+            return 0;
         }
-    }
-
-    private Node renderTable(RenderNode tableNode) {
-        GridPane gp = new GridPane();
-        applyFxStyles(gp, tableNode.style);
-
-        int rowIndex = 0;
-        for (RenderNode row : tableNode.children) {
-            if (row.type != RenderNode.Type.ROW) continue;
-
-            int colIndex = 0;
-            for (RenderNode cell : row.children) {
-                if (cell.type != RenderNode.Type.CELL) continue;
-
-                VBox cellBox = new VBox();
-                applyFxStyles(cellBox, cell.style);
-
-                for (RenderNode c : cell.children) {
-                    Node child = render(c);
-                    if (child instanceof Text t) {
-                        t.setStyle(createStyleString(cell.style));
-                    }
-                    cellBox.getChildren().add(child);
-                }
-
-                gp.add(cellBox, colIndex, rowIndex);
-                colIndex++;
-            }
-            rowIndex++;
-        }
-
-        return gp;
-    }
-
-
-
-    private Node renderRow(RenderNode rn) {
-        HBox hb = new HBox();
-        applyFxStyles(hb, rn.style);
-        for (RenderNode c : rn.children) hb.getChildren().add(render(c));
-        return hb;
-    }
-
-    private Node renderCell(RenderNode rn) {
-        VBox cellBox = new VBox();
-        applyFxStyles(cellBox, rn.style);
-
-        for (RenderNode child : rn.children) {
-            Node fxChild = render(child);
-            if (fxChild instanceof Text t) t.setStyle(createStyleString(rn.style));
-            cellBox.getChildren().add(fxChild);
-        }
-        return cellBox;
-    }
-
-    private String createStyleString(Map<String,String> styles) {
-        StringBuilder sb = new StringBuilder();
-        for (Map.Entry<String,String> e : styles.entrySet()) {
-            String fx = mapCssProperty(e.getKey(), e.getValue());
-            if (fx != null) sb.append(fx).append(": ").append(e.getValue()).append("; ");
-        }
-        return sb.toString();
     }
 }
