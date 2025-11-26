@@ -1,5 +1,8 @@
 package com.webbrowser.webbrowser.browser.rendering;
 
+import com.webbrowser.webbrowser.browser.rendering.css.CssParser;
+import com.webbrowser.webbrowser.browser.rendering.css.CssRule;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

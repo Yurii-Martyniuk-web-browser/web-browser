@@ -1,6 +1,6 @@
 package com.webbrowser.webbrowser.browser.rendering.visitor;
 
-import com.webbrowser.webbrowser.browser.rendering.PageContext; // Ваш новий клас контексту
+import com.webbrowser.webbrowser.browser.rendering.PageContext;
 import com.webbrowser.webbrowser.browser.rendering.dom.Element;
 import com.webbrowser.webbrowser.browser.rendering.dom.Node;
 import com.webbrowser.webbrowser.network.ResourceLoader;

@@ -26,14 +26,16 @@ public class FxRenderer {
     private final LayoutStrategy blockStrategy = new BlockLayoutStrategy();
     private final LayoutStrategy inlineStrategy = new InlineLayoutStrategy();
     private final LayoutStrategy imageStrategy = new ImageLayoutStrategy();
+    private final LayoutStrategy tableStrategy = new TableLayoutStrategy();
 
     public Node render(RenderNode rn) {
         if (rn == null) return new Region();
 
         return switch (rn.type) {
-            case BLOCK -> blockStrategy.createNode(rn, this);
+            case BLOCK, CELL -> blockStrategy.createNode(rn, this);
             case INLINE, TEXT -> inlineStrategy.createNode(rn, this);
             case IMAGE -> imageStrategy.createNode(rn, this);
+            case TABLE -> tableStrategy.createNode(rn, this);
             default -> new Label("Unsupported Type");
         };
     }
@@ -132,35 +134,140 @@ public class FxRenderer {
         }
     }
 
+    private static class TableLayoutStrategy implements LayoutStrategy {
+        @Override
+        public Node createNode(RenderNode rn, FxRenderer renderer) {
+            GridPane grid = new GridPane();
+
+            applyBoxModelStyles(grid, rn.style);
+
+            grid.setHgap(2);
+            grid.setVgap(2);
+
+            int rowIndex = 0;
+
+            List<RenderNode> rows = extractRows(rn);
+
+            for (RenderNode rowNode : rows) {
+                int colIndex = 0;
+
+                for (RenderNode cellNode : rowNode.children) {
+                    if (cellNode.type != RenderNode.Type.CELL) continue;
+
+                    VBox cellBox = new VBox();
+                    applyBoxModelStyles(cellBox, cellNode.style);
+
+                    for (RenderNode content : cellNode.children) {
+                        cellBox.getChildren().add(renderer.render(content));
+                    }
+
+                    grid.add(cellBox, colIndex, rowIndex);
+
+                    GridPane.setHgrow(cellBox, Priority.ALWAYS);
+                    GridPane.setVgrow(cellBox, Priority.ALWAYS);
+
+                    colIndex++;
+                }
+                rowIndex++;
+            }
+
+            return grid;
+        }
+
+        private List<RenderNode> extractRows(RenderNode tableNode) {
+            List<RenderNode> rows = new ArrayList<>();
+            for (RenderNode child : tableNode.children) {
+                if (child.type == RenderNode.Type.ROW) {
+                    rows.add(child);
+                } else if (child.type == RenderNode.Type.BLOCK) {
+                    rows.addAll(extractRows(child));
+                }
+            }
+            return rows;
+        }
+    }
+
     private static void applyBoxModelStyles(Region region, Map<String, String> styles) {
         String bg = styles.get("background-color");
         if (bg != null) {
             try {
                 region.setBackground(new Background(new BackgroundFill(Color.web(bg), CornerRadii.EMPTY, Insets.EMPTY)));
             } catch (Exception ignored) {}
-        } else {
-            // відладка
-            //region.setBorder(new Border(new BorderStroke(Color.LIGHTGRAY, BorderStrokeStyle.DASHED, CornerRadii.EMPTY, new BorderWidths(1))));
         }
 
         region.setMaxWidth(Double.MAX_VALUE);
+        if (styles.containsKey("width")) {
+            region.setPrefWidth(parseSize(styles.get("width")));
+            if (!styles.get("width").contains("%")) {
+                region.setMaxWidth(Region.USE_PREF_SIZE);
+            }
+        }
+        if (styles.containsKey("height")) {
+            region.setPrefHeight(parseSize(styles.get("height")));
+        }
 
-        double pt = parseSize(styles.getOrDefault("padding-top", styles.get("padding")));
-        double pr = parseSize(styles.getOrDefault("padding-right", styles.get("padding")));
-        double pb = parseSize(styles.getOrDefault("padding-bottom", styles.get("padding")));
-        double pl = parseSize(styles.getOrDefault("padding-left", styles.get("padding")));
-        region.setPadding(new Insets(pt, pr, pb, pl));
+        Insets padding = resolveInsets(styles, "padding");
+        region.setPadding(padding);
+
+        Insets margin = resolveInsets(styles, "margin");
+        if (!margin.equals(Insets.EMPTY)) {
+            VBox.setMargin(region, margin);
+            HBox.setMargin(region, margin);
+        }
 
         String borderWidth = styles.get("border-width");
         if (borderWidth != null) {
             double b = parseSize(borderWidth);
-            region.setBorder(new Border(new BorderStroke(Color.BLACK, BorderStrokeStyle.SOLID, CornerRadii.EMPTY, new BorderWidths(b))));
+            String borderColorStr = styles.getOrDefault("border-color", "black");
+            Color borderColor = Color.BLACK;
+            try { borderColor = Color.web(borderColorStr); } catch (Exception ignored) {}
+
+            region.setBorder(new Border(new BorderStroke(
+                    borderColor,
+                    BorderStrokeStyle.SOLID,
+                    CornerRadii.EMPTY,
+                    new BorderWidths(b)
+            )));
+        }
+    }
+
+    private static Insets resolveInsets(Map<String, String> styles, String prefix) {
+        double top = 0, right = 0, bottom = 0, left = 0;
+        String shorthand = styles.get(prefix);
+
+        if (shorthand != null && !shorthand.isEmpty()) {
+            String[] parts = shorthand.trim().split("\\s+");
+            switch (parts.length) {
+                case 1 -> {
+                    double val = parseSize(parts[0]);
+                    top = right = bottom = left = val;
+                }
+                case 2 -> {
+                    double v = parseSize(parts[0]);
+                    double h = parseSize(parts[1]);
+                    top = bottom = v;
+                    right = left = h;
+                }
+                case 3 -> {
+                    top = parseSize(parts[0]);
+                    right = left = parseSize(parts[1]);
+                    bottom = parseSize(parts[2]);
+                }
+                case 4 -> {
+                    top = parseSize(parts[0]);
+                    right = parseSize(parts[1]);
+                    bottom = parseSize(parts[2]);
+                    left = parseSize(parts[3]);
+                }
+            }
         }
 
-        if (styles.containsKey("width")) region.setPrefWidth(parseSize(styles.get("width")));
-        if (styles.containsKey("height")) region.setPrefHeight(parseSize(styles.get("height")));
+        if (styles.containsKey(prefix + "-top")) top = parseSize(styles.get(prefix + "-top"));
+        if (styles.containsKey(prefix + "-right")) right = parseSize(styles.get(prefix + "-right"));
+        if (styles.containsKey(prefix + "-bottom")) bottom = parseSize(styles.get(prefix + "-bottom"));
+        if (styles.containsKey(prefix + "-left")) left = parseSize(styles.get(prefix + "-left"));
 
-
+        return new Insets(top, right, bottom, left);
     }
 
     private static void applyTextStyles(Text text, Map<String, String> styles) {

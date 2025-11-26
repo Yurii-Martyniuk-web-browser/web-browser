@@ -1,4 +1,4 @@
-package com.webbrowser.webbrowser.browser.rendering;
+package com.webbrowser.webbrowser.browser.rendering.css;
 
 import java.util.*;
 import java.util.regex.Matcher;

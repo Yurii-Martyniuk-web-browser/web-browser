@@ -1,5 +1,6 @@
-package com.webbrowser.webbrowser.browser.rendering;
+package com.webbrowser.webbrowser.browser.rendering.css;
 
+import com.webbrowser.webbrowser.browser.rendering.PageContext;
 import com.webbrowser.webbrowser.browser.rendering.dom.Element;
 import java.util.HashMap;
 import java.util.Map;
@@ -37,6 +38,19 @@ public class StyleCalculator {
                 "text-decoration", "underline",
                 "cursor", "pointer"
         ));
+
+        USER_AGENT_STYLES.put("table", Map.of("display", "table", "border-color", "gray", "border-width", "1px"));
+        USER_AGENT_STYLES.put("tr", Map.of("display", "table-row"));
+
+        Map<String, String> cellStyle = Map.of(
+                "display", "table-cell",
+                "border-width", "1px",
+                "border-style", "solid",
+                "border-color", "gray",
+                "padding", "3px"
+        );
+        USER_AGENT_STYLES.put("td", cellStyle);
+        USER_AGENT_STYLES.put("th", cellStyle);
     }
 
     public static Map<String, String> computeStyle(Element element, PageContext context) {

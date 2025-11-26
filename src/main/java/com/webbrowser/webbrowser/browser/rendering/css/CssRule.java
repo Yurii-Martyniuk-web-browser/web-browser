@@ -1,4 +1,4 @@
-package com.webbrowser.webbrowser.browser.rendering;
+package com.webbrowser.webbrowser.browser.rendering.css;
 
 import java.util.Map;
 
@@ -16,12 +16,11 @@ public class CssRule implements Comparable<CssRule> {
     private int calculateSpecificity(String selector) {
         if (selector.startsWith("#")) return 100;
         if (selector.startsWith(".")) return 10;
-        return 1; // Tag
+        return 1;
     }
 
     @Override
     public int compareTo(CssRule other) {
-        // Сортуємо по зростанню ваги, щоб сильніші правила застосовувались останніми
         return Integer.compare(this.specificity, other.specificity);
     }
 }

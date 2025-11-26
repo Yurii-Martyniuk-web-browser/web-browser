@@ -2,6 +2,7 @@ package com.webbrowser.webbrowser.browser.core;
 
 import com.webbrowser.webbrowser.browser.rendering.*;
 import com.webbrowser.webbrowser.browser.rendering.dom.Document;
+import com.webbrowser.webbrowser.browser.rendering.html.HtmlParser;
 import com.webbrowser.webbrowser.browser.rendering.visitor.CssApplierVisitor;
 import com.webbrowser.webbrowser.browser.rendering.visitor.DomTraverser;
 import com.webbrowser.webbrowser.browser.rendering.visitor.ResourceFetcherVisitor;

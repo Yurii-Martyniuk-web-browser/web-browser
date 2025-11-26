@@ -1,5 +1,7 @@
 package com.webbrowser.webbrowser.browser.rendering;
 
+import com.webbrowser.webbrowser.browser.rendering.css.StyleCalculator;
+import com.webbrowser.webbrowser.browser.rendering.dom.Document;
 import com.webbrowser.webbrowser.browser.rendering.dom.Element;
 import com.webbrowser.webbrowser.browser.rendering.dom.Node;
 import com.webbrowser.webbrowser.browser.rendering.dom.TextNode;
@@ -8,18 +10,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-public class RenderTreeBuilder {
+public record RenderTreeBuilder(PageContext pageContext) {
 
-    private final PageContext pageContext;
-
-    // Властивості, які передаються від батька до дітей
     private static final Set<String> INHERITABLE_PROPERTIES = Set.of(
             "color", "font-family", "font-size", "font-style", "font-weight",
             "text-align", "text-decoration", "visibility", "line-height", "href"
     );
 
-    // --- ВИПРАВЛЕННЯ: Повертаємо список блокових тегів ---
-    // Це страховка: якщо StyleCalculator не спрацював, ми все одно знаємо, що це блок.
     private static final Set<String> BLOCK_TAGS = Set.of(
             "html", "body", "div", "p", "blockquote", "pre", "center", "hr", "form",
             "h1", "h2", "h3", "h4", "h5", "h6",
@@ -28,17 +25,12 @@ public class RenderTreeBuilder {
             "ul", "ol", "li", "dl", "dt", "dd", "figure", "figcaption"
     );
 
-    public RenderTreeBuilder(PageContext pageContext) {
-        this.pageContext = pageContext;
-    }
-
-    public RenderNode build(com.webbrowser.webbrowser.browser.rendering.dom.Document doc) {
+    public RenderNode build(Document doc) {
         Map<String, String> defaultStyles = new HashMap<>();
         defaultStyles.put("color", "#000000");
         defaultStyles.put("font-size", "16px");
-        defaultStyles.put("font-family", "Arial, sans-serif"); // Додав дефолтний шрифт
+        defaultStyles.put("font-family", "Arial, sans-serif");
 
-        // Якщо це HTML/BODY, примусово робимо їх блоками, щоб сторінка мала структуру
         RenderNode root = createRenderNode(doc.getRoot(), defaultStyles);
         if (root != null && root.type == RenderNode.Type.INLINE) {
             root.type = RenderNode.Type.BLOCK;
@@ -49,7 +41,6 @@ public class RenderTreeBuilder {
     private RenderNode createRenderNode(Node node, Map<String, String> inheritedStyles) {
         if (node instanceof TextNode textNode) {
             String text = textNode.getText().replace("\n", " ").replace("\r", " ");
-            // Якщо текст складається тільки з пробілів, скорочуємо до одного
             if (text.isBlank() && !text.isEmpty()) text = " ";
             if (text.isEmpty()) return null;
 
@@ -66,18 +57,13 @@ public class RenderTreeBuilder {
 
             RenderNode rn = new RenderNode();
 
-            // 1. Рахуємо стилі
             Map<String, String> calculatedStyles = StyleCalculator.computeStyle(el, pageContext);
 
-            // 2. Об'єднуємо (успадковані + власні)
             rn.style.putAll(inheritedStyles);
             rn.style.putAll(calculatedStyles);
 
-            // 3. Визначаємо тип (BLOCK / INLINE / IMAGE)
-            // Тут була помилка: ми покладалися лише на style.get("display")
             configureRenderType(rn, el, rn.style);
 
-            // 4. Готуємо стилі для дітей
             Map<String, String> stylesForChildren = new HashMap<>();
             for (Map.Entry<String, String> entry : rn.style.entrySet()) {
                 if (INHERITABLE_PROPERTIES.contains(entry.getKey())) {
@@ -107,34 +93,42 @@ public class RenderTreeBuilder {
         return Set.of("head", "meta", "link", "script", "style", "title", "noscript").contains(tag);
     }
 
-    // --- ОНОВЛЕНИЙ МЕТОД ---
     private void configureRenderType(RenderNode rn, Element el, Map<String, String> styles) {
         String tagName = el.tagName();
         String display = styles.get("display");
 
-        // 1. Картинки завжди окремо
-        if (tagName.equals("img")) {
-            rn.type = RenderNode.Type.IMAGE;
-            rn.src = el.getAttribute("src");
-            rn.image = pageContext.getImage(rn.src);
-            return;
+        switch (tagName) {
+            case "img" -> {
+                rn.type = RenderNode.Type.IMAGE;
+                rn.src = el.getAttribute("src");
+                rn.image = pageContext.getImage(rn.src);
+                return;
+            }
+            case "table" -> {
+                rn.type = RenderNode.Type.TABLE;
+                return;
+            }
+            case "tr" -> {
+                rn.type = RenderNode.Type.ROW;
+                return;
+            }
+            case "td", "th" -> {
+                rn.type = RenderNode.Type.CELL;
+                return;
+            }
         }
 
-        // 2. Якщо це відомий БЛОКОВИЙ тег (div, p, h1...) — примусово робимо БЛОКОМ,
-        // навіть якщо StyleCalculator помилково повернув "inline".
         if (BLOCK_TAGS.contains(tagName)) {
             rn.type = RenderNode.Type.BLOCK;
-            rn.style.put("display", "block"); // Виправляємо стиль
+            rn.style.put("display", "block");
             return;
         }
 
-        // 3. Якщо CSS явно вимагає BLOCK (наприклад <span style="display:block">)
         if ("block".equalsIgnoreCase(display)) {
             rn.type = RenderNode.Type.BLOCK;
             return;
         }
 
-        // 4. В усіх інших випадках — INLINE
         rn.type = RenderNode.Type.INLINE;
     }
 }
