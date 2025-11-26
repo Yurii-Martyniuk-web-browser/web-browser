@@ -40,13 +40,23 @@ public record RenderTreeBuilder(PageContext pageContext) {
 
     private RenderNode createRenderNode(Node node, Map<String, String> inheritedStyles) {
         if (node instanceof TextNode textNode) {
-            String text = textNode.getText().replace("\n", " ").replace("\r", " ");
-            if (text.isBlank() && !text.isEmpty()) text = " ";
-            if (text.isEmpty()) return null;
+            String rawText = textNode.getText();
+
+            String normalized = rawText
+                    .replace("\t", " ")
+                    .replace("\n", " ")
+                    .replace("\r", " ")
+                    .replaceAll("\\s+", " ");
+
+            if (normalized.isBlank() && !rawText.isEmpty()) {
+                normalized = " ";
+            }
+
+            if (normalized.isEmpty()) return null;
 
             RenderNode rn = new RenderNode();
             rn.type = RenderNode.Type.TEXT;
-            rn.text = text;
+            rn.text = normalized;
             rn.style.putAll(inheritedStyles);
             return rn;
         }
