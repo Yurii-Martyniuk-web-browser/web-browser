@@ -10,16 +10,16 @@ public class ClientSessionRepository {
 
     private static final String SQL_INIT = """
         CREATE TABLE IF NOT EXISTS session (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            user_id INTEGER,
+            id INTEGER PRIMARY KEY CHECK (id = 1),\s
+            user_id INTEGER,\s
             email TEXT
-        );
+        );\s
         """;
 
     private static final String SQL_INSERT_OR_REPLACE = """
         INSERT OR REPLACE INTO session (id, user_id, email)\s
-        VALUES (1, ?, ?);
-       \s""";
+        VALUES (1, ?, ?);\s
+        """;
 
     private static final String SQL_SELECT = """
         SELECT user_id, email\s

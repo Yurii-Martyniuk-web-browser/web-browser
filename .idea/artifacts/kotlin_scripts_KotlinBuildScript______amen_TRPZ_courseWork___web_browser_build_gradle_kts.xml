@@ -1,0 +1,20 @@
+<component name="ArtifactManager">
+  <artifact type="javafx" build-on-make="true" name="kotlin.scripts.KotlinBuildScript...\::amen:TRPZ:courseWork:мій курсач:web-browser:build.gradle.kts">
+    <output-path>$PROJECT_DIR$/out/artifacts/kotlin_scripts_KotlinBuildScript______amen_TRPZ_courseWork___web_browser_build_gradle_kts</output-path>
+    <properties id="javafx-properties">
+      <options>
+        <option name="appClass" value="com.webbrowser.webbrowser.BrowserApp" />
+        <option name="description" value="" />
+        <option name="htmlPlaceholderId" value="" />
+        <option name="title" value="BrowserApp" />
+        <option name="vendor" value="" />
+        <option name="version" value="1.0" />
+      </options>
+    </properties>
+    <root id="root">
+      <element id="archive" name="kotlin_scripts_KotlinBuildScript______amen_TRPZ_courseWork___web_browser_build_gradle_kts.jar">
+        <element id="module-output" name="kotlin.scripts.KotlinBuildScript...\::amen:TRPZ:courseWork:мій курсач:web-browser:build.gradle.kts" />
+      </element>
+    </root>
+  </artifact>
+</component>

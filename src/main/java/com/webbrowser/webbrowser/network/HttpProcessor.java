@@ -23,7 +23,7 @@ public class HttpProcessor implements ResourceLoader {
     public HttpProcessor() {
         this.httpClient = new HttpClient();
 
-        RedirectHandler redirectHandler = new RedirectHandler(httpClient);
+        ResponseHandler redirectHandler = new RedirectHandler(httpClient);
         ResponseHandler errorHandler = new ErrorHandler();
         redirectHandler.setNextHandler(errorHandler);
 

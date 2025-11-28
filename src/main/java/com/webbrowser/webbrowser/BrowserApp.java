@@ -14,6 +14,9 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import java.io.FileWriter;
+import java.io.IOException;
+
 public class BrowserApp extends Application {
 
     @Override
@@ -75,6 +78,15 @@ public class BrowserApp extends Application {
     }
 
     public static void main(String[] args) {
-        launch(args);
+        try {
+            Application.launch(BrowserApp.class, args);
+        } catch (Exception e) {
+            e.printStackTrace();
+            try {
+                new FileWriter("error.log").append(e.toString()).close();
+            } catch (IOException ex) {
+                throw new RuntimeException(ex);
+            }
+        }
     }
 }
